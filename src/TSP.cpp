@@ -1,51 +1,31 @@
-#include "TSP.h"
-
 #include <iostream>
 #include <vector>
 #include <tuple>
 #include <algorithm>
-#include <math.h>
 #include <random>
+
+#include "TSP.h"
+#include "utility.h"
 
 using namespace std;
 
-double squared_distance(pair<double, double> &t1, pair<double, double> &t2) {
-    double dx = t1.first - t2.first;
-    double dy = t1.second - t2.second;
-    return dx * dx + dy * dy;
-}
-
-// TODO: check if needed for savings function at all, dynamic calculation of matrix might be faster?
-int **distance_matrix(vector<pair<double, double>> cities) {
-    int **matrix = new int *[cities.size()];
-    for (unsigned i = 0; i < cities.size(); i++) {
-        matrix[i] = new int[cities.size()];
-    }
-    for (unsigned i = 0; i < cities.size() - 1; i++) {
-        for (unsigned j = i + 1; j < cities.size(); j++) {
-            matrix[i][j] = matrix[j][i] = round(sqrt(squared_distance(cities[i], cities[j])));
-        }
-    }
-    return matrix;
-}
-
-bool compare_savings(tuple<int, int, int> t1, tuple<int, int, int> t2) {
+inline bool compare_savings(tuple<int, int, int> t1, tuple<int, int, int> t2) {
     return get<2>(t1) > get<2>(t2);
 }
 
-vector<tuple<int, int, int>> savings(vector<pair<double, double>> cities) {
+vector<tuple<int, int, int>> savings(const vector<pair<double, double>> &cities) {
     vector<tuple<int, int, int>> savings = vector<tuple<int, int, int>>();
-    int **tsp_table = distance_matrix(cities);
+    Grid<int> *tsp_table = distance_matrix(cities);
     for (unsigned i = 1; i < cities.size() - 1; i++) {
         for (unsigned j = i + 1; j < cities.size(); j++) {
-            savings.emplace_back(make_tuple(i, j, tsp_table[0][i] + tsp_table[0][j] - tsp_table[i][j]));
+            savings.emplace_back(make_tuple(i, j, (*tsp_table)[0][i] + (*tsp_table)[0][j] - (*tsp_table)[i][j]));
         }
     }
     sort(savings.begin(), savings.end(), compare_savings);
     return savings;
 }
 
-vector<int> TSP::travel(vector<pair<double, double>> cities) {
+vector<int> TSP::travel(const vector<pair<double, double>> &cities) {
     return TSP::travel_naive(cities);
 }
 
@@ -54,13 +34,13 @@ vector<int> TSP::travel_naive(vector<pair<double, double>> cities) {
     vector<bool> used = vector<bool>(cities.size());
     tour[0] = 0;
     used[0] = true;
-    for (int i = 1; i <= cities.size() - 1; i++) {
+    for (unsigned i = 1; i <= cities.size() - 1; i++) {
         int best = -1;
-        for (int j = 0; j <= cities.size() - 1; j++) {
+        for (unsigned j = 0; j <= cities.size() - 1; j++) {
             bool is_better = best == -1 or squared_distance(cities[tour[i - 1]], cities[j]) <
                                            squared_distance(cities[tour[i - 1]], cities[best]);
             if (not used[j] and is_better) {
-                best = j;
+                best = (int) j;
             }
         }
         tour[i] = best;
@@ -70,7 +50,7 @@ vector<int> TSP::travel_naive(vector<pair<double, double>> cities) {
 }
 
 // Clarke-Wright Savings Algorithms. City at index 0 used as hub.
-vector<int> TSP::travel_cw(vector<pair<double, double>> cities) {
+vector<int> TSP::travel_cw(const vector<pair<double, double>> &cities) {
     // get savings
     vector<tuple<int, int, int>> s = savings(cities);
 
@@ -111,11 +91,11 @@ vector<int> TSP::travel_cw(vector<pair<double, double>> cities) {
     return tour;
 }
 
-int TSP::tour_distance(vector<pair<double, double>> cities, vector<int> tour) {
+int TSP::tour_distance(const vector<pair<double, double>> &cities, vector<int> tour) {
     int distance = 0;
-    int **tsp_table = distance_matrix(cities);
+    auto tsp_table = distance_matrix(cities);
     for (unsigned i = 0; i < tour.size() - 1; i++) {
-        distance += tsp_table[tour[i]][tour[i + 1]];
+        distance += (*tsp_table)[tour[i]][tour[i + 1]];
     }
     return distance;
 }
@@ -124,6 +104,7 @@ vector<pair<double, double>> TSP::create_n_cities(int n) {
     double lower_bound = 0;
     double upper_bound = (double) n * 10;
     vector<pair<double, double>> cities = vector<pair<double, double>>();
+    cities.reserve(n);
 
     uniform_real_distribution<double> unif(lower_bound, upper_bound);
     default_random_engine re;

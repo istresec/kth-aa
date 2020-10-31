@@ -1,23 +1,21 @@
 #include <iostream>
 #include <chrono>
+#include <array>
 #include "TSP.h"
+
 using namespace std;
 
-int main(int, char **) { // (int argc, char **argv)
+int main(int, char **) {
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
     std::cout << "Let's travel tha woooooooooooooooooooorld!" << std::endl;
 
     int n;
     vector<int> tour;
 
-    cin >> n;
+//    cin >> n;
+    n = 1000;
     vector<pair<double, double>> cities;
-
-    // generate cities randomly
-    cities = TSP::create_n_cities(n);
-    cout << "Generated " << n << " cities:\n";
-    for(auto & city: cities) {
-        cout << get<0>(city) << ' ' << get<1>(city) << endl;
-    }
 
     // input
 //    for (int i = 0; i < n; i++) {
@@ -26,13 +24,21 @@ int main(int, char **) { // (int argc, char **argv)
 //        cities.emplace_back(x, y);
 //    }
 
+    // generate cities randomly
+    cities = TSP::create_n_cities(n);
+    cout << "Generated " << n << " cities:\n";
+    for (auto &city: cities) {
+        cout << get<0>(city) << ' ' << get<1>(city) << endl;
+    }
+
     cout << "Naive/greedy tour:\n";
     auto start = chrono::high_resolution_clock::now();
     tour = TSP::travel(cities);
     chrono::duration<double> elapsed = chrono::high_resolution_clock::now() - start;
     for (int i = 0; i < n; i++) {
-        cout << tour[i] << endl;
+        cout << tour[i] << " ";
     }
+    cout << endl;
     cout << "Time elapsed: " << elapsed.count() << endl;
     cout << "Distance: " << TSP::tour_distance(cities, tour) << endl;
 
@@ -41,8 +47,9 @@ int main(int, char **) { // (int argc, char **argv)
     tour = TSP::travel_cw(cities);
     elapsed = chrono::high_resolution_clock::now() - start;
     for (int i = 0; i < n; i++) {
-        cout << tour[i] << endl;
+        cout << tour[i] << " ";
     }
+    cout << endl;
     cout << "Time elapsed: " << elapsed.count() << endl;
     cout << "Distance: " << TSP::tour_distance(cities, tour) << endl;
 
