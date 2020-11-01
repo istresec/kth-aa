@@ -3,6 +3,8 @@
 #include <tuple>
 #include <algorithm>
 #include <random>
+#include <chrono>
+#include <list>
 
 #include "TSP.h"
 #include "utility.h"
@@ -26,9 +28,11 @@ vector<pair<double, double>> TSP::create_n_cities(int n) {
     cities.reserve(n);
 
     uniform_real_distribution<double> unif(lower_bound, upper_bound);
-    default_random_engine re;
+    chrono::high_resolution_clock clock;
+    default_random_engine generator;
+    generator.seed(clock.now().time_since_epoch().count());
     for (int i = 0; i < n; i++) {
-        cities.emplace_back(pair<double, double>(unif(re), unif(re)));
+        cities.emplace_back(pair<double, double>(unif(generator), unif(generator)));
     }
     return cities;
 }
@@ -37,12 +41,11 @@ inline bool compare_savings(tuple<int, int, int> t1, tuple<int, int, int> t2) {
     return get<2>(t1) > get<2>(t2);
 }
 
-vector<tuple<int, int, int>> savings(const vector<pair<double, double>> &cities) {
+vector<tuple<int, int, int>> savings(const vector<pair<double, double>> &cities, Grid<int> &distances) {
     vector<tuple<int, int, int>> savings = vector<tuple<int, int, int>>();
-    Grid<int> *tsp_table = distance_matrix(cities);
     for (unsigned i = 1; i < cities.size() - 1; i++) {
         for (unsigned j = i + 1; j < cities.size(); j++) {
-            savings.emplace_back(make_tuple(i, j, (*tsp_table)[0][i] + (*tsp_table)[0][j] - (*tsp_table)[i][j]));
+            savings.emplace_back(make_tuple(i, j, distances[0][i] + distances[0][j] - distances[i][j]));
         }
     }
     sort(savings.begin(), savings.end(), compare_savings);
@@ -72,46 +75,77 @@ vector<int> TSP::travel_naive(const vector<pair<double, double>> &cities, Grid<i
     return tour;
 }
 
-// Clarke-Wright Savings Algorithms. City at index 0 used as hub.
-vector<int> TSP::travel_cw(const vector<pair<double, double>> &cities) {
+// Nearest Neighbour Algorithm - pick random vertex and go the shortest distance you can
+vector<int> TSP::travel_nn(vector<pair<double, double>> cities, Grid<int> &distances) {
+    vector<int> tour = vector<int>();
+    return tour;
+}
+
+// Clarke-Wright Savings Algorithm. City at index 0 used as hub.
+vector<int> TSP::travel_cw(const vector<pair<double, double>> &cities, Grid<int> &distances) {
     // get savings
-    vector<tuple<int, int, int>> s = savings(cities);
+    vector<tuple<int, int, int>> s = savings(cities, distances);
 
     // initialize tours
-    vector<vector<int>> tours = vector<vector<int>>();
+    vector<int> tours[cities.size()];
     for (int i = 1; i < cities.size(); i++)
-        tours.emplace_back(vector<int>{i}); // instead of 0, i, 0 just use i
+        tours[i] = vector<int>{i}; // instead of 0, i, 0 just use i
 
     // algorithm
-    vector<int> indices;
     vector<int> temp_tour;
-    int i, j, endpoint;
+    vector<int> first, second;
+    int i, j;
     for (auto &it : s) {
-        indices = vector<int>();
         i = get<0>(it);
         j = get<1>(it);
-        for (unsigned k = 0; k < tours.size(); k++) {
-            endpoint = tours[k].back();
-            if (endpoint == i or endpoint == j) {
-                indices.emplace_back(k);
-                if (indices.size() == 2) {
-                    temp_tour = tours[indices[0]];
-                    temp_tour.insert(temp_tour.end(), tours[indices[1]].begin(), tours[indices[1]].end());
-                    tours[indices[0]] = temp_tour;
-                    tours.erase(tours.begin() + indices[1]);
-                    break;
-                }
-            }
+        // if two distinct tours with endpoints i and j exist, if so combine them (O(1))
+        if (not tours[i].empty() and not tours[j].empty() and tours[i].front() != tours[j].front()) {
+            first = tours[i]; // remember tour with endpoint i
+            second = tours[j]; // remember tour with endpoint j
+            // remove tours with endpoints i and j while a new tour is constructed
+            tours[first.front()] = tours[first.back()] = tours[second.front()] = tours[second.back()] = vector<int>();
+
+            if (first.front() == i)
+                reverse(first.begin(), first.end()); // reverse tour with endpoint i if it starts with i
+            if (second.front() != j)
+                reverse(second.begin(), second.end()); // reverse tour with j if it doesn't start with j
+
+            // create new tour by joining the two
+            first.insert(first.end(), second.begin(), second.end());
+
+            // remember endpoints of the new tour in array of endpoints for quick access
+            tours[first.front()] = first;
+            tours[first.back()] = first;
         }
     }
 
     // create final tour
     vector<int> tour = vector<int>();
     tour.emplace_back(0);
-    tour.insert(tour.end(), tours[0].begin(), tours[0].end());
+    for (i = 1; i < cities.size(); i++) {
+        if (not tours[i].empty())
+            break;
+    }
+    tour.insert(tour.end(), tours[i].begin(), tours[i].end());
 
     cout << "Returning Clarke Wright.\n";
     return tour;
+}
+
+// Clarke-Wright Sequential Savings Algorithm. City at index 0 used as hub.
+vector<int> TSP::travel_cw_seq(const vector<pair<double, double>> &cities, Grid<int> &distances) {
+    // get savings
+    vector<tuple<int, int, int>> s = savings(cities, distances);
+
+    // initialize tours
+    vector<vector<int>> tours = vector<vector<int>>();
+    for (int i = 1; i < cities.size(); i++) {
+        tours.emplace_back(vector<int>{i}); // instead of 0, i, 0 just use i
+    }
+
+    // TODO: implement if needed
+
+    return vector<int>();
 }
 
 vector<int> TSP::local_2opt(vector<int> tour, Grid<int> &distances, Grid<int> &knearest,
@@ -137,7 +171,7 @@ vector<int> TSP::local_2opt(vector<int> tour, Grid<int> &distances, Grid<int> &k
         if (best_change > 0) {
             reverse(tour.begin() + best_i + 1, tour.begin() + best_j + 1);
         }
-    } while ((best_change > 0) & (deadline == nullptr || (system_clock::now() + milliseconds(36) < *deadline)));
+    } while ((best_change > 0) & (deadline == nullptr or (system_clock::now() < *deadline)));
 
     return tour;
 }

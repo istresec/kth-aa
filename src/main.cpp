@@ -17,12 +17,12 @@ int main(int, char **) {
     int n;
     vector<int> tour;
 
-//    cin >> n;
     n = 1000;
     vector<pair<double, double>> cities;
     VariadicTable<std::string, int, double> vt({"Algo", "Distance", "Time elapsed"});
 
-    // input
+//     input
+//    cin >> n;
 //    for (int i = 0; i < n; i++) {
 //        double x, y;
 //        cin >> x >> y;
@@ -54,7 +54,7 @@ int main(int, char **) {
 
     /* Naive with 2opt */
     cout << "Naive with 2opt: ";
-    time_point deadline = system_clock::now() + milliseconds(2000);
+    time_point<system_clock, duration<long, ratio<1, 1000000000>>> deadline = system_clock::now() + milliseconds(1800);
     Grid<int> *knn = distances; // TODO Dummy assignment. knn not implemented
     tour = TSP::local_2opt(tour, *distances, *knn, &deadline);
 
@@ -77,7 +77,8 @@ int main(int, char **) {
     /* Clarke Wright */
     cout << "Clarke Wright tour:\n";
     start = chrono::high_resolution_clock::now();
-    tour = TSP::travel_cw(cities);
+    distances = distance_matrix(cities);
+    tour = TSP::travel_cw(cities, *distances);
 
     elapsed = chrono::high_resolution_clock::now() - start;
     distance = TSP::tour_distance(cities, tour);

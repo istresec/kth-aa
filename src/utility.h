@@ -44,7 +44,6 @@ inline double squared_distance(const pair<double, double> &t1, const pair<double
     return dx * dx + dy * dy;
 }
 
-// TODO: check if needed for savings function at all, dynamic calculation of matrix might be faster?
 inline Grid<int> *distance_matrix(const vector<pair<double, double>> &cities) {
     auto matrix = new Grid<int>(cities.size(), cities.size());
     for (unsigned i = 0; i < cities.size() - 1; i++) {
