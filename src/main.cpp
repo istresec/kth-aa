@@ -1,9 +1,13 @@
 #include <iostream>
 #include <chrono>
 #include <array>
+
 #include "TSP.h"
+#include "utility.h"
+#include "VariadicTable.h"
 
 using namespace std;
+using namespace chrono;
 
 int main(int, char **) {
     ios::sync_with_stdio(false);
@@ -16,6 +20,7 @@ int main(int, char **) {
 //    cin >> n;
     n = 1000;
     vector<pair<double, double>> cities;
+    VariadicTable<std::string, int, double> vt({"Algo", "Distance", "Time elapsed"});
 
     // input
 //    for (int i = 0; i < n; i++) {
@@ -31,27 +36,71 @@ int main(int, char **) {
         cout << get<0>(city) << ' ' << get<1>(city) << endl;
     }
 
-    cout << "Naive/greedy tour:\n";
+    /* Naive tour */
+    cout << "Naive/greedy tour: ";
     auto start = chrono::high_resolution_clock::now();
-    tour = TSP::travel(cities);
+    auto distances = distance_matrix(cities);
+    tour = TSP::travel_naive(cities, *distances);
+
     chrono::duration<double> elapsed = chrono::high_resolution_clock::now() - start;
-    for (int i = 0; i < n; i++) {
-        cout << tour[i] << " ";
-    }
+    int distance = TSP::tour_distance(cities, tour);
+    for (int i = 0; i < n; i++) { cout << tour[i] << " "; }
     cout << endl;
     cout << "Time elapsed: " << elapsed.count() << endl;
-    cout << "Distance: " << TSP::tour_distance(cities, tour) << endl;
+    cout << "Distance: " << distance << endl;
+    vt.addRow("Naive", distance, elapsed.count());
+    vt.print(cout);
 
+
+    /* Naive with 2opt */
+    cout << "Naive with 2opt: ";
+    time_point deadline = system_clock::now() + milliseconds(2000);
+    Grid<int> *knn = distances; // TODO Dummy assignment. knn not implemented
+    tour = TSP::local_2opt(tour, *distances, *knn, &deadline);
+
+    distance = TSP::tour_distance(cities, tour);
+    elapsed = chrono::high_resolution_clock::now() - start;
+    for (int i = 0; i < n; i++) { cout << tour[i] << " "; }
+    cout << endl;
+    cout << "Time elapsed: " << elapsed.count() << endl;
+    cout << "Distance: " << distance << endl;
+    vt.addRow("Naive 2opt", distance, elapsed.count());
+    vt.print(cout);
+
+    tour = TSP::local_2opt(tour, *distances, *knn, nullptr);
+    distance = TSP::tour_distance(cities, tour);
+    elapsed = chrono::high_resolution_clock::now() - start;
+    vt.addRow("Naive 2opt no deadline", distance, elapsed.count());
+    vt.print(cout);
+
+
+    /* Clarke Wright */
     cout << "Clarke Wright tour:\n";
     start = chrono::high_resolution_clock::now();
     tour = TSP::travel_cw(cities);
+
     elapsed = chrono::high_resolution_clock::now() - start;
-    for (int i = 0; i < n; i++) {
-        cout << tour[i] << " ";
-    }
+    distance = TSP::tour_distance(cities, tour);
+    for (int i = 0; i < n; i++) { cout << tour[i] << " "; }
     cout << endl;
     cout << "Time elapsed: " << elapsed.count() << endl;
-    cout << "Distance: " << TSP::tour_distance(cities, tour) << endl;
+    cout << "Distance: " << distance << endl;
+    vt.addRow("Clarke Wright", distance, elapsed.count());
+    vt.print(cout);
+
+
+    /* Clarke Wright with 2opt */
+    cout << "Clarke Wright with 2opt: ";
+    tour = TSP::local_2opt(tour, *distances, *knn, nullptr);
+
+    elapsed = chrono::high_resolution_clock::now() - start;
+    distance = TSP::tour_distance(cities, tour);
+    for (int i = 0; i < n; i++) { cout << tour[i] << " "; }
+    cout << endl;
+    cout << "Time elapsed: " << elapsed.count() << endl;
+    cout << "Distance: " << distance << endl;
+    vt.addRow("Clarke Wright 2opt no deadline", distance, elapsed.count());
+    vt.print(cout);
 
     return 0;
 }

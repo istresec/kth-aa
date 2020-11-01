@@ -9,6 +9,8 @@
 #include <cmath>
 #include <random>
 
+using namespace std;
+
 template<class T>
 class Grid { // https://stackoverflow.com/questions/936687/how-do-i-declare-a-2d-array-in-c-using-new
     size_t _rows;
@@ -48,7 +50,6 @@ inline Grid<int> *distance_matrix(const vector<pair<double, double>> &cities) {
     for (unsigned i = 0; i < cities.size() - 1; i++) {
         for (unsigned j = i + 1; j < cities.size(); j++) {
             (*matrix)[i][j] = (*matrix)[j][i] = round(sqrt(squared_distance(cities[i], cities[j])));
-//            matrix(i,j)
         }
     }
     return matrix;
