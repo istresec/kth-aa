@@ -1,6 +1,6 @@
 /**
  * Source: https://github.com/friedmud/variadic_table/
- * /
+ */
 
 #pragma once
 
