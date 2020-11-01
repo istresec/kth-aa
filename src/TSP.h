@@ -12,13 +12,13 @@ using namespace chrono;
 
 class TSP {
 public:
-    static vector<int> travel(const vector<pair<double, double>> &cities, Grid<int> &distances);
+    static vector<int> travel(const vector<pair<double, double>> &cities);
 
     static vector<int> travel_naive(const vector<pair<double, double>> &cities, Grid<int> &distances);
 
     static vector<int> travel_nn(vector<pair<double, double>> cities, Grid<int> &distances);
 
-    static vector<int> travel_cw(const vector<pair<double, double>>& cities, Grid<int> &distances);
+    static vector<int> travel_cw(const vector<pair<double, double>> &cities, Grid<int> &distances);
 
     static vector<int> travel_cw_seq(const vector<pair<double, double>> &cities, Grid<int> &distances);
 
@@ -27,7 +27,7 @@ public:
 
     static int tour_distance(const vector<pair<double, double>> &cities, vector<int> tour);
 
-    static vector<pair<double, double>> create_n_cities(int n);
+    static vector<pair<double, double>> create_n_cities(int n, int seed = 72);
 };
 
 

@@ -4,7 +4,6 @@
 #include <algorithm>
 #include <random>
 #include <chrono>
-#include <list>
 
 #include "TSP.h"
 #include "utility.h"
@@ -21,16 +20,16 @@ int TSP::tour_distance(const vector<pair<double, double>> &cities, vector<int> t
     return distance;
 }
 
-vector<pair<double, double>> TSP::create_n_cities(int n) {
+vector<pair<double, double>> TSP::create_n_cities(int n, int seed) {
     double lower_bound = 0;
     double upper_bound = (double) n * 10;
-    vector<pair<double, double>> cities = vector<pair<double, double>>();
+    vector<pair<double, double >> cities = vector<pair<double, double >>();
     cities.reserve(n);
 
     uniform_real_distribution<double> unif(lower_bound, upper_bound);
     chrono::high_resolution_clock clock;
     default_random_engine generator;
-    generator.seed(clock.now().time_since_epoch().count());
+    generator.seed(seed);
     for (int i = 0; i < n; i++) {
         cities.emplace_back(pair<double, double>(unif(generator), unif(generator)));
     }
@@ -42,7 +41,7 @@ inline bool compare_savings(tuple<int, int, int> t1, tuple<int, int, int> t2) {
 }
 
 vector<tuple<int, int, int>> savings(const vector<pair<double, double>> &cities, Grid<int> &distances) {
-    vector<tuple<int, int, int>> savings = vector<tuple<int, int, int>>();
+    vector<tuple<int, int, int >> savings = vector<tuple<int, int, int >>();
     for (unsigned i = 1; i < cities.size() - 1; i++) {
         for (unsigned j = i + 1; j < cities.size(); j++) {
             savings.emplace_back(make_tuple(i, j, distances[0][i] + distances[0][j] - distances[i][j]));
@@ -52,9 +51,11 @@ vector<tuple<int, int, int>> savings(const vector<pair<double, double>> &cities,
     return savings;
 }
 
-//vector<int> TSP::travel(const vector<pair<double, double>> &cities) {
-//    return TSP::travel_naive(cities, distances);
-//}
+vector<int> TSP::travel(const vector<pair<double, double>> &cities) {
+    auto distances = distance_matrix(cities);
+    auto tour = TSP::travel_cw(cities, *distances);
+    return tour;
+}
 
 vector<int> TSP::travel_naive(const vector<pair<double, double>> &cities, Grid<int> &distances) {
     vector<int> tour = vector<int>(cities.size());
@@ -138,7 +139,7 @@ vector<int> TSP::travel_cw_seq(const vector<pair<double, double>> &cities, Grid<
     vector<tuple<int, int, int>> s = savings(cities, distances);
 
     // initialize tours
-    vector<vector<int>> tours = vector<vector<int>>();
+    vector<vector<int>> tours = vector<vector<int >>();
     for (int i = 1; i < cities.size(); i++) {
         tours.emplace_back(vector<int>{i}); // instead of 0, i, 0 just use i
     }

@@ -9,98 +9,90 @@
 using namespace std;
 using namespace chrono;
 
+[[maybe_unused]] int kattis_demo() {
+    int n;
+    vector<int> tour;
+    vector<pair<double, double>> cities;
+
+    cin >> n;
+    for (int i = 0; i < n; i++) {
+        double x, y;
+        cin >> x >> y;
+        cities.emplace_back(x, y);
+    }
+
+    tour = TSP::travel(cities);
+    for (int i = 0; i < n; i++) {
+        cout << tour[i] << endl;
+    }
+
+    return 0;
+}
+
+void demo_alg(const string &alg_name, vector<pair<double, double>> &cities, VariadicTable<string, int, double> &vt,
+              vector<int> (*construction_alg)(const vector<pair<double, double>> &, Grid<int> &)) {
+    cout << alg_name << ": ";
+
+    auto start = chrono::high_resolution_clock::now();
+    auto distances = distance_matrix(cities);
+    auto tour = construction_alg(cities, *distances);
+
+    chrono::duration<double> elapsed = chrono::high_resolution_clock::now() - start;
+    int distance = TSP::tour_distance(cities, tour);
+    for (int i: tour) {
+        cout << i << " ";
+    }
+    cout << endl;
+    vt.addRow(alg_name, distance, elapsed.count());
+}
+
+void demo_2opt(const string &alg_name, vector<pair<double, double>> &cities, VariadicTable<string, int, double> &vt,
+               bool use_deadline, vector<int> (*construction_alg)(const vector<pair<double, double>> &, Grid<int> &)) {
+    cout << alg_name;
+
+    time_point<system_clock, duration<long, ratio<1, 1000000000>>> deadline = system_clock::now() + milliseconds(1900);
+    auto start = chrono::high_resolution_clock::now();
+    auto distances = distance_matrix(cities);
+    Grid<int> *knn = distances; // TODO Dummy assignment. knn not implemented
+
+    auto tour = construction_alg(cities, *distances);
+    tour = TSP::local_2opt(tour, *distances, *knn, use_deadline ? &deadline : nullptr);
+
+    chrono::duration<double> elapsed = chrono::high_resolution_clock::now() - start;
+    int distance = TSP::tour_distance(cities, tour);
+    for (int i: tour) {
+        cout << i << " ";
+    }
+    cout << endl;
+    vt.addRow(alg_name, distance, elapsed.count());
+}
+
 int main(int, char **) {
     ios::sync_with_stdio(false);
     cin.tie(nullptr);
+
+    /* Kattis */
+    // return kattis_demo();
+
     std::cout << "Let's travel tha woooooooooooooooooooorld!" << std::endl;
 
-    int n;
+    int n = 1000;
     vector<int> tour;
-
-    n = 1000;
-    vector<pair<double, double>> cities;
-    VariadicTable<std::string, int, double> vt({"Algo", "Distance", "Time elapsed"});
-
-//     input
-//    cin >> n;
-//    for (int i = 0; i < n; i++) {
-//        double x, y;
-//        cin >> x >> y;
-//        cities.emplace_back(x, y);
-//    }
-
-    // generate cities randomly
-    cities = TSP::create_n_cities(n);
+    auto cities = TSP::create_n_cities(n);
     cout << "Generated " << n << " cities:\n";
     for (auto &city: cities) {
         cout << get<0>(city) << ' ' << get<1>(city) << endl;
     }
+    VariadicTable<string, int, double> vt({"Algo", "Distance", "Time elapsed"});
 
-    /* Naive tour */
-    cout << "Naive/greedy tour: ";
-    auto start = chrono::high_resolution_clock::now();
-    auto distances = distance_matrix(cities);
-    tour = TSP::travel_naive(cities, *distances);
-
-    chrono::duration<double> elapsed = chrono::high_resolution_clock::now() - start;
-    int distance = TSP::tour_distance(cities, tour);
-    for (int i = 0; i < n; i++) { cout << tour[i] << " "; }
-    cout << endl;
-    cout << "Time elapsed: " << elapsed.count() << endl;
-    cout << "Distance: " << distance << endl;
-    vt.addRow("Naive", distance, elapsed.count());
+    demo_alg("Naive", cities, vt, TSP::travel_naive);
+    demo_2opt("Naive 2opt", cities, vt, true, TSP::travel_naive);
+    demo_2opt("Naive 2opt NO deadline", cities, vt, false, TSP::travel_naive);
     vt.print(cout);
 
-
-    /* Naive with 2opt */
-    cout << "Naive with 2opt: ";
-    time_point<system_clock, duration<long, ratio<1, 1000000000>>> deadline = system_clock::now() + milliseconds(1800);
-    Grid<int> *knn = distances; // TODO Dummy assignment. knn not implemented
-    tour = TSP::local_2opt(tour, *distances, *knn, &deadline);
-
-    distance = TSP::tour_distance(cities, tour);
-    elapsed = chrono::high_resolution_clock::now() - start;
-    for (int i = 0; i < n; i++) { cout << tour[i] << " "; }
-    cout << endl;
-    cout << "Time elapsed: " << elapsed.count() << endl;
-    cout << "Distance: " << distance << endl;
-    vt.addRow("Naive 2opt", distance, elapsed.count());
-    vt.print(cout);
-
-    tour = TSP::local_2opt(tour, *distances, *knn, nullptr);
-    distance = TSP::tour_distance(cities, tour);
-    elapsed = chrono::high_resolution_clock::now() - start;
-    vt.addRow("Naive 2opt no deadline", distance, elapsed.count());
-    vt.print(cout);
-
-
-    /* Clarke Wright */
-    cout << "Clarke Wright tour:\n";
-    start = chrono::high_resolution_clock::now();
-    distances = distance_matrix(cities);
-    tour = TSP::travel_cw(cities, *distances);
-
-    elapsed = chrono::high_resolution_clock::now() - start;
-    distance = TSP::tour_distance(cities, tour);
-    for (int i = 0; i < n; i++) { cout << tour[i] << " "; }
-    cout << endl;
-    cout << "Time elapsed: " << elapsed.count() << endl;
-    cout << "Distance: " << distance << endl;
-    vt.addRow("Clarke Wright", distance, elapsed.count());
-    vt.print(cout);
-
-
-    /* Clarke Wright with 2opt */
-    cout << "Clarke Wright with 2opt: ";
-    tour = TSP::local_2opt(tour, *distances, *knn, nullptr);
-
-    elapsed = chrono::high_resolution_clock::now() - start;
-    distance = TSP::tour_distance(cities, tour);
-    for (int i = 0; i < n; i++) { cout << tour[i] << " "; }
-    cout << endl;
-    cout << "Time elapsed: " << elapsed.count() << endl;
-    cout << "Distance: " << distance << endl;
-    vt.addRow("Clarke Wright 2opt no deadline", distance, elapsed.count());
+    demo_alg("CW", cities, vt, TSP::travel_cw);
+    demo_2opt("CW 2opt", cities, vt, true, TSP::travel_cw);
+    demo_2opt("CW 2opt NO deadline", cities, vt, false, TSP::travel_cw);
     vt.print(cout);
 
     return 0;
