@@ -54,26 +54,30 @@ inline double squared_distance(const pair<double, double> &t1, const pair<double
     return dx * dx + dy * dy;
 }
 
-inline Grid<int> *distance_matrix(const vector<pair<double, double>> &cities) {
-    auto matrix = new Grid<int>(cities.size(), cities.size());
-    for (unsigned i = 0; i < cities.size() - 1; i++) {
-        for (unsigned j = i + 1; j < cities.size(); j++) {
+template<class T=int>
+inline Grid<T> *distance_matrix(const vector<pair<double, double>> &cities) {
+    auto n = cities.size();
+    auto matrix = new Grid<T>(n, n);
+    for (unsigned i = 0; i < n - 1; i++) {
+        for (unsigned j = i + 1; j < n; j++) {
             (*matrix)[i][j] = (*matrix)[j][i] = round(sqrt(squared_distance(cities[i], cities[j])));
         }
     }
     return matrix;
 }
 
-inline Grid<int> *k_nearest_neighbors(const vector<pair<double, double>> &cities, Grid<int> &distances, int k) {
-    auto knn = new Grid<int>(cities.size(), k);
+template<class T, class U>
+inline Grid<T> *k_nearest_neighbors(Grid<U> &distances, int k) {
+    auto n = distances.rows();
+    auto knn = new Grid<T>(n, k);
 
-    auto cmp = [](const pair<int, int> &a, const pair<int, int> &b) { return a.first > b.first; };
-    auto heap = vector<pair<int, int>>();
-    heap.reserve(cities.size());
+    auto cmp = [](const pair<U, T> &a, const pair<U, T> &b) { return a.first > b.first; };
+    auto heap = vector<pair<U, T>>();
+    heap.reserve(n);
 
-    for (unsigned i = 0; i < cities.size(); i++) {
+    for (unsigned i = 0; i < n; i++) {
         heap.clear();
-        for (unsigned j = 0; j < cities.size(); j++) {
+        for (unsigned j = 0; j < n; j++) {
             if (i != j) { heap.emplace_back(distances[i][j], j); }
         }
         make_heap(heap.begin(), heap.end(), cmp);

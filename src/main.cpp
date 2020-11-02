@@ -19,22 +19,22 @@ void measure_preprocessing_time(vector<pair<double, double>> &cities, VariadicTa
     vt.addRow("distance_matrix", -1, elapsed.count());
 
     start = high_resolution_clock::now();
-    k_nearest_neighbors(cities, *distances, 20);
+    k_nearest_neighbors<uint16_t>(*distances, 20);
     elapsed = high_resolution_clock::now() - start;
     vt.addRow("knn k=20", -1, elapsed.count());
 
     start = high_resolution_clock::now();
-    k_nearest_neighbors(cities, *distances, 80);
+    k_nearest_neighbors<uint16_t>(*distances, 80);
     elapsed = high_resolution_clock::now() - start;
     vt.addRow("knn k=80", -1, elapsed.count());
 
     start = high_resolution_clock::now();
-    k_nearest_neighbors(cities, *distances, 150);
+    k_nearest_neighbors<uint16_t>(*distances, 150);
     elapsed = high_resolution_clock::now() - start;
     vt.addRow("knn k=150", -1, elapsed.count());
 
     start = high_resolution_clock::now();
-    k_nearest_neighbors(cities, *distances, 999);
+    k_nearest_neighbors<uint16_t>(*distances, 999);
     elapsed = high_resolution_clock::now() - start;
     vt.addRow("knn k=999", -1, elapsed.count());
 }
@@ -68,7 +68,7 @@ void demo_2opt(
     time_point<system_clock, duration<long, ratio<1, 1000000000>>> deadline = system_clock::now() + milliseconds(1900);
     auto start = high_resolution_clock::now();
     auto distances = distance_matrix(cities);
-    Grid<int> *knn = k_nearest_neighbors(cities, *distances, k);
+    Grid<uint16_t> *knn = k_nearest_neighbors<uint16_t>(*distances, k);
 
     auto tour = construction_alg(cities, *distances);
     tour = TSP::local_2opt(tour, *distances, *knn, use_deadline ? &deadline : nullptr);
@@ -103,20 +103,24 @@ int main(int, char **) {
         auto distances = distance_matrix(cities);
         distances->print();
         cout << "KNN matrix:" << endl;
-        k_nearest_neighbors(cities, *distances, 10)->print();
+        k_nearest_neighbors<uint16_t>(*distances, 10)->print();
     }
 
     measure_preprocessing_time(cities, vt);
     vt.print(cout);
 
     demo_alg("Naive", cities, vt, TSP::travel_naive);
-    demo_2opt("Naive 2opt-80", cities, vt, true, 999, TSP::travel_naive);
-//    demo_2opt("Naive 2opt-80 NO deadline", cities, vt, false, 999, TSP::travel_naive);
+    demo_2opt("Naive 2opt-20", cities, vt, true, 20, TSP::travel_naive);
+    demo_2opt("Naive 2opt-20 NO deadline", cities, vt, false, 20, TSP::travel_naive);
+    demo_2opt("Naive 2opt-80", cities, vt, true, 80, TSP::travel_naive);
+    demo_2opt("Naive 2opt-80 NO deadline", cities, vt, false, 80, TSP::travel_naive);
     vt.print(cout);
 
     demo_alg("CW", cities, vt, TSP::travel_cw);
-    demo_2opt("CW 2opt-80", cities, vt, true, 999, TSP::travel_cw);
-    demo_2opt("CW 2opt-80 NO deadline", cities, vt, false, 999, TSP::travel_cw);
+    demo_2opt("CW 2opt-20", cities, vt, true, 20, TSP::travel_cw);
+    demo_2opt("CW 2opt-20 NO deadline", cities, vt, false, 20, TSP::travel_cw);
+    demo_2opt("CW 2opt-80", cities, vt, true, 80, TSP::travel_cw);
+    demo_2opt("CW 2opt-80 NO deadline", cities, vt, false, 80, TSP::travel_cw);
     vt.print(cout);
 
     return 0;

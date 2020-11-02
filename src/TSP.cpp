@@ -53,7 +53,7 @@ vector<tuple<int, int, int>> savings(const vector<pair<double, double>> &cities,
 
 vector<int> TSP::travel(const vector<pair<double, double>> &cities) {
     auto distances = distance_matrix(cities);
-    auto tour = TSP::travel_cw(cities, *distances);
+    auto tour = travel_naive(cities, *distances);
     return tour;
 }
 
@@ -129,7 +129,6 @@ vector<int> TSP::travel_cw(const vector<pair<double, double>> &cities, Grid<int>
     }
     tour.insert(tour.end(), tours[i].begin(), tours[i].end());
 
-    cout << "Returning Clarke Wright.\n";
     return tour;
 }
 
@@ -149,30 +148,110 @@ vector<int> TSP::travel_cw_seq(const vector<pair<double, double>> &cities, Grid<
     return vector<int>();
 }
 
-vector<int> TSP::local_2opt(vector<int> tour, Grid<int> &distances, Grid<int> &knearest,
+template<class T, class U>
+inline int local2OptChange(Grid<T> &tour, Grid<U> &distances, int i, int j) {
+    return (distances[i][tour[i][1]] + distances[j][tour[j][1]]) -
+           (distances[i][j] + distances[tour[i][1]][tour[j][1]]);
+}
+
+inline void local2OptUpdate(Grid<uint16_t> &tour, uint16_t i, uint16_t j) {
+    uint16_t ii = tour[i][1], jj = tour[j][1];
+    tour[i][1] = j;
+    tour[jj][0] = ii;
+    uint16_t next = tour[ii][1];
+    while (next != j) {
+//        cout << "n:" << next << "\t" << tour[next][0] << " " << tour[next][1] << endl;
+        swap(tour[next][0], tour[next][1]);
+//        cout << "after -- n:" << next << "\t" << tour[next][0] << " " << tour[next][1] << endl;
+        next = tour[next][0];
+    }
+    tour[j][1] = tour[j][0];
+    tour[j][0] = i;
+    tour[ii][0] = tour[ii][1];
+    tour[ii][1] = jj;
+}
+
+vector<int> TSP::local_2opt(vector<int> tour_vector, Grid<int> &distances, Grid<uint16_t> &knn,
                             time_point<system_clock, duration<long, ratio<1, 1000000000>>> *deadline) {
     // TODO use a tree structure for storing tour so that reverse is fast
-    int best_change;
+    uint16_t n = tour_vector.size();
+    auto tour = Grid<uint16_t>(n, 2);
+    for (int i = 0; i < n; i++) {
+        tour[tour_vector[i]][0] = tour_vector[i == 0 ? i - 1 + n : i - 1];
+        tour[tour_vector[i]][1] = tour_vector[i == n - 1 ? i + 1 - n : i + 1];
+    }
+
+    int bestChange;
+    auto shouldBeChecked = vector<bool>(n, true);
     do {
-        best_change = 0.;
-        unsigned best_i, best_j;
-        int change;
-        for (unsigned i = 0; i < tour.size() - 2; i++) {
-            for (unsigned j = i + 2; j < tour.size(); j++) {
-                // TODO use knn to narrow the search. now one step is O(n^2), with knn it will be O(kn)
-                change = (distances[tour[i]][tour[i + 1]] + distances[tour[j]][tour[(j + 1) % tour.size()]]) -
-                         (distances[tour[i]][tour[j]] + distances[tour[i + 1]][tour[(j + 1) % tour.size()]]);
-                if (change > best_change) {
-                    best_change = change;
-                    best_i = i;
-                    best_j = j;
+        bestChange = 0.;
+        uint16_t best_i, best_j;
+        for (uint16_t i = 0; i < n - 1; i++) {
+            if (not shouldBeChecked[i]) continue;
+
+            bool iCannotDoBetter = false;
+            for (uint16_t j = 0; j < knn.columns(); j++) {
+                uint16_t a = i, b = knn[i][j];
+                if (i > b) continue;
+                if (tour[i][0] == knn[i][j] or tour[i][1] == knn[i][j]) continue;
+
+                int change1 = local2OptChange(tour, distances, a, b);
+                int change2 = local2OptChange(tour, distances, tour[a][0], tour[b][0]);
+                int change = change1 > change2 ? change1 : change2;
+
+                if (change > 0) { iCannotDoBetter = true; }
+                if (change > bestChange) {
+                    bestChange = change;
+                    best_i = change1 > change2 ? a : tour[a][0];
+                    best_j = change1 > change2 ? b : tour[b][0];
                 }
             }
+            if (not iCannotDoBetter) { shouldBeChecked[i] = false; }
         }
-        if (best_change > 0) {
-            reverse(tour.begin() + best_i + 1, tour.begin() + best_j + 1);
+        if (bestChange > 0) {
+            for (uint16_t j = 0; j < knn.columns(); j++) {
+                shouldBeChecked[knn[best_i][j]] = true;
+                shouldBeChecked[knn[best_j][j]] = true;
+                shouldBeChecked[knn[tour[best_i][1]][j]] = true;
+                shouldBeChecked[knn[tour[best_j][1]][j]] = true;
+            }
+            local2OptUpdate(tour, best_i, best_j);
         }
-    } while ((best_change > 0) & (deadline == nullptr or (system_clock::now() < *deadline)));
+    } while ((bestChange > 0) & (deadline == nullptr or (system_clock::now() < *deadline)));
 
-    return tour;
+    uint16_t current = 0;
+    for (unsigned i = 0; i < n; i++) {
+        tour_vector[i] = current;
+        current = tour[current][1];
+    }
+    return tour_vector;
 }
+
+//vector<int> TSP::local_2opt(vector<int> tour, Grid<int> &distances, Grid<int> &knearest,
+//                            time_point<system_clock, duration<long, ratio<1, 1000000000>>> *deadline) {
+//    // TODO use a tree structure for storing tour so that reverse is fast
+//    int best_change;
+//    do {
+//        best_change = 0.;
+//        unsigned best_i, best_j;
+//        int change;
+//        for (unsigned i = 0; i < tour.size() - 2; i++) {
+//            for (unsigned j = i + 2; j < tour.size(); j++) {
+//                // TODO use knn to narrow the search. now one step is O(n^2), with knn it will be O(kn)
+//                change = (distances[tour[i]][tour[i + 1]] + distances[tour[j]][tour[(j + 1) % tour.size()]]) -
+//                         (distances[tour[i]][tour[j]] + distances[tour[i + 1]][tour[(j + 1) % tour.size()]]);
+//                if (change > best_change) {
+//                    best_change = change;
+//                    best_i = i;
+//                    best_j = j;
+//                }
+//            }
+//        }
+//        if (best_change > 0) {
+//            reverse(tour.begin() + best_i + 1, tour.begin() + best_j + 1);
+//        }
+//    } while ((best_change > 0) & (deadline == nullptr or (system_clock::now() < *deadline)));
+//
+//    return tour;
+//}
+
