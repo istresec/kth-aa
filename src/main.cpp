@@ -3,7 +3,6 @@
 #include <array>
 
 #include "TSP.h"
-#include "utility.h"
 #include "VariadicTable.h"
 
 using namespace std;
@@ -65,7 +64,7 @@ void demo_2opt(
         vector<int> (*construction_alg)(const vector<pair<double, double>> &, Grid<int> &)) {
     cout << alg_name;
 
-    time_point<system_clock, duration<long, ratio<1, 1000000000>>> deadline = system_clock::now() + milliseconds(1900);
+    time_point<system_clock, duration<long, ratio<1, 1000000000>>> deadline = system_clock::now() + milliseconds(2000);
     auto start = high_resolution_clock::now();
     auto distances = distance_matrix(cities);
     Grid<uint16_t> *knn = k_nearest_neighbors<uint16_t>(*distances, k);
@@ -96,7 +95,7 @@ int main(int, char **) {
     // logging
     {
         cout << "Generated " << n << " cities:\n";
-        for (int i = 0; i < cities.size(); i++) {
+        for (unsigned i = 0; i < cities.size(); i++) {
             cout << i << ' ' << get<0>(cities[i]) << ' ' << get<1>(cities[i]) << endl;
         }
         cout << "Distance matrix:" << endl;
