@@ -133,7 +133,6 @@ vector<int> TSP::travel_cw(const vector<pair<double, double>> &cities, Grid<int>
         tour.emplace_back(0);
     }
 
-    cout << "Returning Clarke Wright.\n";
     return tour;
 }
 
@@ -177,30 +176,48 @@ vector<int> TSP::travel_cw_seq(const vector<pair<double, double>> &cities, Grid<
         }
     }
 
-    vector<int> TSP::local_2opt(vector<int> tour, Grid<int> &distances, Grid<int> &knearest,
-                                time_point<system_clock, duration<long, ratio<1, 1000000000>>> *deadline) {
-        // TODO use a tree structure for storing tour so that reverse is fast
-        int best_change;
-        do {
-            best_change = 0.;
-            unsigned best_i, best_j;
-            int change;
-            for (unsigned i = 0; i < tour.size() - 2; i++) {
-                for (unsigned j = i + 2; j < tour.size(); j++) {
-                    // TODO use knn to narrow the search. now one step is O(n^2), with knn it will be O(kn)
-                    change = (distances[tour[i]][tour[i + 1]] + distances[tour[j]][tour[(j + 1) % tour.size()]]) -
-                             (distances[tour[i]][tour[j]] + distances[tour[i + 1]][tour[(j + 1) % tour.size()]]);
-                    if (change > best_change) {
-                        best_change = change;
-                        best_i = i;
-                        best_j = j;
-                    }
+    // create final tour
+    vector<int> tour = vector<int>();
+    for (i = 1; i < (int) cities.size(); i++) {
+        if (not tours[i].empty())
+            break;
+    }
+    // check where to place the hub to minimize tour distance (start/end?)
+    if (distances[0][tours[i].front()] < distances[0][tours[i].back()]) {
+        tour.emplace_back(0);
+        tour.insert(tour.end(), tours[i].begin(), tours[i].end());
+    } else {
+        tour = tours[i];
+        tour.emplace_back(0);
+    }
+
+    return tour;
+}
+
+vector<int> TSP::local_2opt(vector<int> tour, Grid<int> &distances, Grid<int> &knearest,
+                            time_point<system_clock, duration<long, ratio<1, 1000000000>>> *deadline) {
+    // TODO use a tree structure for storing tour so that reverse is fast
+    int best_change;
+    do {
+        best_change = 0.;
+        unsigned best_i, best_j;
+        int change;
+        for (unsigned i = 0; i < tour.size() - 2; i++) {
+            for (unsigned j = i + 2; j < tour.size(); j++) {
+                // TODO use knn to narrow the search. now one step is O(n^2), with knn it will be O(kn)
+                change = (distances[tour[i]][tour[i + 1]] + distances[tour[j]][tour[(j + 1) % tour.size()]]) -
+                         (distances[tour[i]][tour[j]] + distances[tour[i + 1]][tour[(j + 1) % tour.size()]]);
+                if (change > best_change) {
+                    best_change = change;
+                    best_i = i;
+                    best_j = j;
                 }
             }
-            if (best_change > 0) {
-                reverse(tour.begin() + best_i + 1, tour.begin() + best_j + 1);
-            }
-        } while ((best_change > 0) & (deadline == nullptr or (system_clock::now() < *deadline)));
+        }
+        if (best_change > 0) {
+            reverse(tour.begin() + best_i + 1, tour.begin() + best_j + 1);
+        }
+    } while ((best_change > 0) & (deadline == nullptr or (system_clock::now() < *deadline)));
 
-        return tour;
-    }
+    return tour;
+}
