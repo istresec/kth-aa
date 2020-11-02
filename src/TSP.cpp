@@ -20,7 +20,7 @@ int TSP::tour_distance(const vector<pair<double, double>> &cities, vector<int> t
 }
 
 vector<pair<double, double>> TSP::create_n_cities(int n, int seed) {
-    double lower_bound = 0;
+    double lower_bound = (double) - n * 10;
     double upper_bound = (double) n * 10;
     vector<pair<double, double >> cities = vector<pair<double, double >>();
     cities.reserve(n);
@@ -81,6 +81,10 @@ vector<int> TSP::travel_nn(vector<pair<double, double>> cities, Grid<int> &dista
 
 // Clarke-Wright Savings Algorithm. City at index 0 used as hub.
 vector<int> TSP::travel_cw(const vector<pair<double, double>> &cities, Grid<int> &distances) {
+    // if only one city
+    if(cities.size() == 1)
+        return vector<int>{0};
+
     // get savings
     vector<tuple<int, int, int>> s = savings(cities, distances);
 
@@ -139,6 +143,10 @@ vector<int> TSP::travel_cw(const vector<pair<double, double>> &cities, Grid<int>
 // TODO: implement if needed
 // Clarke-Wright Sequential Savings Algorithm. City at index 0 used as hub.
 vector<int> TSP::travel_cw_seq(const vector<pair<double, double>> &cities, Grid<int> &distances) {
+    // if only one city
+    if(cities.size() == 1)
+        return vector<int>{0};
+
     // get savings
     vector<tuple<int, int, int>> s = savings(cities, distances);
 
