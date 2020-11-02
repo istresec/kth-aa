@@ -12,20 +12,21 @@ using namespace chrono;
 
 vector<int> TSP::travel(const vector<pair<double, double>> &cities) {
     time_point<system_clock, duration<long, ratio<1, 1000000000>>> deadline = system_clock::now() +
-                                                                              milliseconds(1000);
+                                                                              milliseconds(1950);
     auto distances = distance_matrix(cities);
-//    Grid <uint16_t> *knn = k_nearest_neighbors<uint16_t>(*distances, 200);
-    Grid<uint16_t> *knn = nullptr;
     auto tour = travel_cw(cities, *distances);
-    tour = TSP::local_2opt_no_knn(tour, *distances, *knn, &deadline);
+    Grid<uint16_t> *knn = k_nearest_neighbors<uint16_t>(*distances, 200);
+    tour = TSP::local_2opt(tour, *distances, *knn, &deadline);
+//    Grid<uint16_t> *knn = nullptr;
+//    tour = TSP::local_2opt_no_knn(tour, *distances, *knn, &deadline);
     return tour;
 }
 
 int TSP::tour_distance(const vector<pair<double, double>> &cities, vector<int> tour) {
     int distance = 0;
     auto tsp_table = distance_matrix(cities);
-    for (unsigned i = 0; i < tour.size() - 1; i++) {
-        distance += (*tsp_table)[tour[i]][tour[i + 1]];
+    for (unsigned i = 0; i < tour.size(); i++) {
+        distance += (*tsp_table)[tour[i]][tour[(i + 1) % cities.size()]];
     }
     return distance;
 }
@@ -219,9 +220,7 @@ inline void local2OptUpdate(Grid<uint16_t> &tour, uint16_t i, uint16_t j) {
     tour[jj][0] = ii;
     uint16_t next = tour[ii][1];
     while (next != j) {
-//        cout << "n:" << next << "\t" << tour[next][0] << " " << tour[next][1] << endl;
         swap(tour[next][0], tour[next][1]);
-//        cout << "after -- n:" << next << "\t" << tour[next][0] << " " << tour[next][1] << endl;
         next = tour[next][0];
     }
     tour[j][1] = tour[j][0];
@@ -246,9 +245,9 @@ vector<int> TSP::local_2opt(vector<int> tour_vector, Grid<int> &distances, Grid<
         bestChange = 0.;
         uint16_t best_i, best_j;
         for (uint16_t i = 0; i < n - 1; i++) {
-            if (not shouldBeChecked[i]) continue;
+//            if (not shouldBeChecked[i]) continue;
 
-            bool iCannotDoBetter = false;
+//            bool iCannotDoBetter = true;
             for (uint16_t j = 0; j < knn.columns(); j++) {
                 uint16_t a = i, b = knn[i][j];
                 if (i > b) continue;
@@ -257,23 +256,25 @@ vector<int> TSP::local_2opt(vector<int> tour_vector, Grid<int> &distances, Grid<
                 int change1 = local2OptChange(tour, distances, a, b);
                 int change2 = local2OptChange(tour, distances, tour[a][0], tour[b][0]);
                 int change = change1 > change2 ? change1 : change2;
+                uint16_t better_a = change1 > change2 ? a : tour[a][0];
+                uint16_t better_b = change1 > change2 ? b : tour[b][0];
 
-                if (change > 0) { iCannotDoBetter = true; }
+//                if (change > 0) { iCannotDoBetter = false; }
                 if (change > bestChange) {
                     bestChange = change;
-                    best_i = change1 > change2 ? a : tour[a][0];
-                    best_j = change1 > change2 ? b : tour[b][0];
+                    best_i = better_a;
+                    best_j = better_b;
                 }
             }
-            if (not iCannotDoBetter) { shouldBeChecked[i] = false; }
+//            if (iCannotDoBetter) { shouldBeChecked[i] = false; }
         }
         if (bestChange > 0) {
-            for (uint16_t j = 0; j < knn.columns(); j++) {
-                shouldBeChecked[knn[best_i][j]] = true;
-                shouldBeChecked[knn[best_j][j]] = true;
-                shouldBeChecked[knn[tour[best_i][1]][j]] = true;
-                shouldBeChecked[knn[tour[best_j][1]][j]] = true;
-            }
+//            for (uint16_t j = 0; j < knn.columns(); j++) {
+//                shouldBeChecked[knn[best_i][j]] = true;
+//                shouldBeChecked[knn[best_j][j]] = true;
+//                shouldBeChecked[knn[tour[best_i][1]][j]] = true;
+//                shouldBeChecked[knn[tour[best_j][1]][j]] = true;
+//            }
             local2OptUpdate(tour, best_i, best_j);
         }
     } while ((bestChange > 0) & (deadline == nullptr or (system_clock::now() < *deadline)));

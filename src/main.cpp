@@ -10,7 +10,7 @@ using namespace chrono;
 
 bool DEBUG = false;
 
-void measure_preprocessing_time(vector<pair<double, double>> &cities, VariadicTable<string, double, double> &vt) {
+void measure_preprocessing_time(vector<pair<double, double>> &cities, VariadicTable<string, int, double> &vt) {
     system_clock::time_point start;
     duration<double> elapsed{};
 
@@ -40,7 +40,7 @@ void measure_preprocessing_time(vector<pair<double, double>> &cities, VariadicTa
     vt.addRow("knn k=999", -1, elapsed.count());
 }
 
-void demo_alg(const string &alg_name, vector<pair<double, double>> &cities, VariadicTable<string, double, double> &vt,
+void demo_alg(const string &alg_name, vector<pair<double, double>> &cities, VariadicTable<string, int, double> &vt,
               vector<int> (*construction_alg)(const vector<pair<double, double>> &, Grid<int> &)) {
     if (DEBUG) {
         cout << alg_name << ": ";
@@ -64,7 +64,7 @@ void demo_alg(const string &alg_name, vector<pair<double, double>> &cities, Vari
 void demo_2opt(
         const string &alg_name,
         vector<pair<double, double>> &cities,
-        VariadicTable<string, double, double> &vt,
+        VariadicTable<string, int, double> &vt,
         bool use_deadline,
         int k,
         vector<int> (*construction_alg)(const vector<pair<double, double>> &, Grid<int> &),
@@ -102,7 +102,7 @@ int main(int, char **) {
     int n = 1000;
     vector<int> tour;
     auto cities = TSP::create_n_cities(n);
-    VariadicTable<string, double, double> vt({"Algo", "Distance", "Time elapsed"});
+    VariadicTable<string, int, double> vt({"Algo", "Distance", "Time elapsed"});
 
     // logging
     if (DEBUG) {
@@ -130,20 +130,20 @@ int main(int, char **) {
     vt.print(cout);
 
     // No deadlines (slow, therefore at end)
-    demo_2opt("Naive 2opt-20 NO deadline", cities, vt, false, 20, TSP::travel_naive);
-    vt.print(cout);
-    demo_2opt("Naive 2opt-80 NO deadline", cities, vt, false, 80, TSP::travel_naive);
-    vt.print(cout);
-    demo_2opt("Naive 2opt-999", cities, vt, false, 999, TSP::travel_naive);
-    vt.print(cout);
+//    demo_2opt("Naive 2opt-20 NO deadline", cities, vt, false, 20, TSP::travel_naive);
+//    vt.print(cout);
+//    demo_2opt("Naive 2opt-80 NO deadline", cities, vt, false, 80, TSP::travel_naive);
+//    vt.print(cout);
+//    demo_2opt("Naive 2opt-999", cities, vt, false, 999, TSP::travel_naive);
+//    vt.print(cout);
     demo_2opt("CW 2opt-20 NO deadline", cities, vt, false, 20, TSP::travel_cw);
     vt.print(cout);
     demo_2opt("CW 2opt-80 NO deadline", cities, vt, false, 80, TSP::travel_cw);
     vt.print(cout);
     demo_2opt("CW 2opt-999", cities, vt, false, 999, TSP::travel_cw);
     vt.print(cout);
-    demo_2opt("Naive 2opt no knn", cities, vt, false, 20, TSP::travel_naive, TSP::local_2opt_no_knn);
-    vt.print(cout);
+//    demo_2opt("Naive 2opt no knn", cities, vt, false, 20, TSP::travel_naive, TSP::local_2opt_no_knn);
+//    vt.print(cout);
     demo_2opt("CW 2opt no knn", cities, vt, false, 20, TSP::travel_cw, TSP::local_2opt_no_knn);
     vt.print(cout);
 
