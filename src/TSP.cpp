@@ -11,14 +11,17 @@ using namespace std;
 using namespace chrono;
 
 vector<int> TSP::travel(const vector<pair<double, double>> &cities) {
-    time_point<system_clock, duration<long, ratio<1, 1000000000>>> deadline = system_clock::now() +
-                                                                              milliseconds(1950);
+    time_point<steady_clock, duration<long long int, ratio<1, 1000000000>>> deadline =
+            steady_clock::now() + milliseconds(1900);
     auto distances = distance_matrix(cities);
     auto tour = travel_cw(cities, *distances);
-    Grid<uint16_t> *knn = k_nearest_neighbors<uint16_t>(*distances, 200);
-    tour = TSP::local_2opt(tour, *distances, *knn, &deadline);
-//    Grid<uint16_t> *knn = nullptr;
-//    tour = TSP::local_2opt_no_knn(tour, *distances, *knn, &deadline);
+    if (tour.size() > 1) {
+        // Grid<uint16_t> *knn = nullptr;
+        // tour = TSP::local_2opt_no_knn(tour, *distances, *knn, &deadline);
+        Grid<uint16_t> *knn = k_nearest_neighbors<uint16_t>(*distances, 200);
+        tour = TSP::local_2opt(tour, *distances, *knn, &deadline);
+    }
+
     return tour;
 }
 
@@ -230,7 +233,7 @@ inline void local2OptUpdate(Grid<uint16_t> &tour, uint16_t i, uint16_t j) {
 }
 
 vector<int> TSP::local_2opt(vector<int> tour_vector, Grid<int> &distances, Grid<uint16_t> &knn,
-                            time_point<system_clock, duration<long, ratio<1, 1000000000>>> *deadline) {
+                            time_point<steady_clock, duration<long long int, ratio<1, 1000000000>>> *deadline) {
 // TODO use a tree structure for storing tour so that reverse is fast
     uint16_t n = tour_vector.size();
     auto tour = Grid<uint16_t>(n, 2);
@@ -277,7 +280,7 @@ vector<int> TSP::local_2opt(vector<int> tour_vector, Grid<int> &distances, Grid<
 //            }
             local2OptUpdate(tour, best_i, best_j);
         }
-    } while ((bestChange > 0) & (deadline == nullptr or (system_clock::now() < *deadline)));
+    } while ((bestChange > 0) & (deadline == nullptr or (steady_clock::now() < *deadline)));
 
     uint16_t current = 0;
     for (unsigned i = 0; i < n; i++) {
@@ -288,7 +291,7 @@ vector<int> TSP::local_2opt(vector<int> tour_vector, Grid<int> &distances, Grid<
 }
 
 vector<int> TSP::local_2opt_no_knn(vector<int> tour, Grid<int> &distances, Grid<uint16_t> &knn,
-                                   time_point<system_clock, duration<long, ratio<1, 1000000000>>> *deadline) {
+                                   time_point<steady_clock, duration<long long int, ratio<1, 1000000000>>> *deadline) {
     int best_change;
     do {
         best_change = 0.;
@@ -308,7 +311,8 @@ vector<int> TSP::local_2opt_no_knn(vector<int> tour, Grid<int> &distances, Grid<
         if (best_change > 0) {
             reverse(tour.begin() + best_i + 1, tour.begin() + best_j + 1);
         }
-    } while ((best_change > 0) & (deadline == nullptr or (system_clock::now() < *deadline)));
+    } while ((best_change > 0) and
+             (deadline == nullptr or (*deadline > steady_clock::now())));
 
     return tour;
 }
