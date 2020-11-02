@@ -9,35 +9,45 @@
 using namespace std;
 using namespace chrono;
 
-[[maybe_unused]] int kattis_demo() {
-    int n;
-    vector<int> tour;
-    vector<pair<double, double>> cities;
+void measure_preprocessing_time(vector<pair<double, double>> &cities, VariadicTable<string, int, double> &vt) {
+    system_clock::time_point start;
+    duration<double> elapsed{};
 
-    cin >> n;
-    for (int i = 0; i < n; i++) {
-        double x, y;
-        cin >> x >> y;
-        cities.emplace_back(x, y);
-    }
+    start = high_resolution_clock::now();
+    auto distances = distance_matrix(cities);
+    elapsed = high_resolution_clock::now() - start;
+    vt.addRow("distance_matrix", -1, elapsed.count());
 
-    tour = TSP::travel(cities);
-    for (int i = 0; i < n; i++) {
-        cout << tour[i] << endl;
-    }
+    start = high_resolution_clock::now();
+    k_nearest_neighbors(cities, *distances, 20);
+    elapsed = high_resolution_clock::now() - start;
+    vt.addRow("knn k=20", -1, elapsed.count());
 
-    return 0;
+    start = high_resolution_clock::now();
+    k_nearest_neighbors(cities, *distances, 80);
+    elapsed = high_resolution_clock::now() - start;
+    vt.addRow("knn k=80", -1, elapsed.count());
+
+    start = high_resolution_clock::now();
+    k_nearest_neighbors(cities, *distances, 150);
+    elapsed = high_resolution_clock::now() - start;
+    vt.addRow("knn k=150", -1, elapsed.count());
+
+    start = high_resolution_clock::now();
+    k_nearest_neighbors(cities, *distances, 999);
+    elapsed = high_resolution_clock::now() - start;
+    vt.addRow("knn k=999", -1, elapsed.count());
 }
 
 void demo_alg(const string &alg_name, vector<pair<double, double>> &cities, VariadicTable<string, int, double> &vt,
               vector<int> (*construction_alg)(const vector<pair<double, double>> &, Grid<int> &)) {
     cout << alg_name << ": ";
 
-    auto start = chrono::high_resolution_clock::now();
+    auto start = high_resolution_clock::now();
     auto distances = distance_matrix(cities);
     auto tour = construction_alg(cities, *distances);
 
-    chrono::duration<double> elapsed = chrono::high_resolution_clock::now() - start;
+    duration<double> elapsed = high_resolution_clock::now() - start;
     int distance = TSP::tour_distance(cities, tour);
     for (int i: tour) {
         cout << i << " ";
@@ -46,19 +56,24 @@ void demo_alg(const string &alg_name, vector<pair<double, double>> &cities, Vari
     vt.addRow(alg_name, distance, elapsed.count());
 }
 
-void demo_2opt(const string &alg_name, vector<pair<double, double>> &cities, VariadicTable<string, int, double> &vt,
-               bool use_deadline, vector<int> (*construction_alg)(const vector<pair<double, double>> &, Grid<int> &)) {
+void demo_2opt(
+        const string &alg_name,
+        vector<pair<double, double>> &cities,
+        VariadicTable<string, int, double> &vt,
+        bool use_deadline,
+        int k,
+        vector<int> (*construction_alg)(const vector<pair<double, double>> &, Grid<int> &)) {
     cout << alg_name;
 
     time_point<system_clock, duration<long, ratio<1, 1000000000>>> deadline = system_clock::now() + milliseconds(1900);
-    auto start = chrono::high_resolution_clock::now();
+    auto start = high_resolution_clock::now();
     auto distances = distance_matrix(cities);
-    Grid<int> *knn = distances; // TODO Dummy assignment. knn not implemented
+    Grid<int> *knn = k_nearest_neighbors(cities, *distances, k);
 
     auto tour = construction_alg(cities, *distances);
     tour = TSP::local_2opt(tour, *distances, *knn, use_deadline ? &deadline : nullptr);
 
-    chrono::duration<double> elapsed = chrono::high_resolution_clock::now() - start;
+    duration<double> elapsed = high_resolution_clock::now() - start;
     int distance = TSP::tour_distance(cities, tour);
     for (int i: tour) {
         cout << i << " ";
@@ -71,58 +86,38 @@ int main(int, char **) {
     ios::sync_with_stdio(false);
     cin.tie(nullptr);
 
-    /* Kattis */
-    // return kattis_demo();
-
     std::cout << "Let's travel tha woooooooooooooooooooorld!" << std::endl;
 
     int n = 1000;
     vector<int> tour;
     auto cities = TSP::create_n_cities(n);
-    cout << "Generated " << n << " cities:\n";
-    for (auto &city: cities) {
-        cout << get<0>(city) << ' ' << get<1>(city) << endl;
-    }
     VariadicTable<string, int, double> vt({"Algo", "Distance", "Time elapsed"});
 
+    // logging
+    {
+        cout << "Generated " << n << " cities:\n";
+        for (int i = 0; i < cities.size(); i++) {
+            cout << i << ' ' << get<0>(cities[i]) << ' ' << get<1>(cities[i]) << endl;
+        }
+        cout << "Distance matrix:" << endl;
+        auto distances = distance_matrix(cities);
+        distances->print();
+        cout << "KNN matrix:" << endl;
+        k_nearest_neighbors(cities, *distances, 10)->print();
+    }
+
+    measure_preprocessing_time(cities, vt);
+    vt.print(cout);
+
     demo_alg("Naive", cities, vt, TSP::travel_naive);
-    demo_2opt("Naive 2opt", cities, vt, true, TSP::travel_naive);
-    demo_2opt("Naive 2opt NO deadline", cities, vt, false, TSP::travel_naive);
+    demo_2opt("Naive 2opt-80", cities, vt, true, 999, TSP::travel_naive);
+//    demo_2opt("Naive 2opt-80 NO deadline", cities, vt, false, 999, TSP::travel_naive);
     vt.print(cout);
 
     demo_alg("CW", cities, vt, TSP::travel_cw);
-    demo_2opt("CW 2opt", cities, vt, true, TSP::travel_cw);
-    demo_2opt("CW 2opt NO deadline", cities, vt, false, TSP::travel_cw);
+    demo_2opt("CW 2opt-80", cities, vt, true, 999, TSP::travel_cw);
+    demo_2opt("CW 2opt-80 NO deadline", cities, vt, false, 999, TSP::travel_cw);
     vt.print(cout);
 
     return 0;
 }
-
-/*
-
-input:
-10
-95.0129 61.5432
-23.1139 79.1937
-60.6843 92.1813
-48.5982 73.8207
-89.1299 17.6266
-76.2097 40.5706
-45.6468 93.5470
-1.8504 91.6904
-82.1407 41.0270
-44.4703 89.3650
-
-naive_output:
-0
-8
-5
-4
-3
-9
-6
-2
-1
-7
-
- */
