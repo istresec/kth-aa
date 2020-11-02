@@ -10,6 +10,17 @@
 using namespace std;
 using namespace chrono;
 
+vector<int> TSP::travel(const vector<pair<double, double>> &cities) {
+    time_point<system_clock, duration<long, ratio<1, 1000000000>>> deadline = system_clock::now() +
+                                                                              milliseconds(1000);
+    auto distances = distance_matrix(cities);
+//    Grid <uint16_t> *knn = k_nearest_neighbors<uint16_t>(*distances, 200);
+    Grid<uint16_t> *knn = nullptr;
+    auto tour = travel_cw(cities, *distances);
+    tour = TSP::local_2opt_no_knn(tour, *distances, *knn, &deadline);
+    return tour;
+}
+
 int TSP::tour_distance(const vector<pair<double, double>> &cities, vector<int> tour) {
     int distance = 0;
     auto tsp_table = distance_matrix(cities);
@@ -20,8 +31,8 @@ int TSP::tour_distance(const vector<pair<double, double>> &cities, vector<int> t
 }
 
 vector<pair<double, double>> TSP::create_n_cities(int n, int seed) {
-    double lower_bound = (double) - n * 10;
-    double upper_bound = (double) n * 10;
+    double lower_bound = -10e6;
+    double upper_bound = 10e6;
     vector<pair<double, double >> cities = vector<pair<double, double >>();
     cities.reserve(n);
 
@@ -46,12 +57,6 @@ vector<tuple<int, int, int>> savings(const vector<pair<double, double>> &cities,
     }
     sort(savings.begin(), savings.end(), compare_savings);
     return savings;
-}
-
-vector<int> TSP::travel(const vector<pair<double, double>> &cities) {
-    auto distances = distance_matrix(cities);
-    auto tour = travel_naive(cities, *distances);
-    return tour;
 }
 
 vector<int> TSP::travel_naive(const vector<pair<double, double>> &cities, Grid<int> &distances) {
@@ -82,7 +87,7 @@ vector<int> TSP::travel_nn(vector<pair<double, double>> cities, Grid<int> &dista
 // Clarke-Wright Savings Algorithm. City at index 0 used as hub.
 vector<int> TSP::travel_cw(const vector<pair<double, double>> &cities, Grid<int> &distances) {
     // if only one city
-    if(cities.size() == 1)
+    if (cities.size() == 1)
         return vector<int>{0};
 
     // get savings
@@ -144,7 +149,7 @@ vector<int> TSP::travel_cw(const vector<pair<double, double>> &cities, Grid<int>
 // Clarke-Wright Sequential Savings Algorithm. City at index 0 used as hub.
 vector<int> TSP::travel_cw_seq(const vector<pair<double, double>> &cities, Grid<int> &distances) {
     // if only one city
-    if(cities.size() == 1)
+    if (cities.size() == 1)
         return vector<int>{0};
 
     // get savings
@@ -227,7 +232,7 @@ inline void local2OptUpdate(Grid<uint16_t> &tour, uint16_t i, uint16_t j) {
 
 vector<int> TSP::local_2opt(vector<int> tour_vector, Grid<int> &distances, Grid<uint16_t> &knn,
                             time_point<system_clock, duration<long, ratio<1, 1000000000>>> *deadline) {
-    // TODO use a tree structure for storing tour so that reverse is fast
+// TODO use a tree structure for storing tour so that reverse is fast
     uint16_t n = tour_vector.size();
     auto tour = Grid<uint16_t>(n, 2);
     for (int i = 0; i < n; i++) {
@@ -281,31 +286,28 @@ vector<int> TSP::local_2opt(vector<int> tour_vector, Grid<int> &distances, Grid<
     return tour_vector;
 }
 
-//vector<int> TSP::local_2opt(vector<int> tour, Grid<int> &distances, Grid<int> &knearest,
-//                            time_point<system_clock, duration<long, ratio<1, 1000000000>>> *deadline) {
-//    // TODO use a tree structure for storing tour so that reverse is fast
-//    int best_change;
-//    do {
-//        best_change = 0.;
-//        unsigned best_i, best_j;
-//        int change;
-//        for (unsigned i = 0; i < tour.size() - 2; i++) {
-//            for (unsigned j = i + 2; j < tour.size(); j++) {
-//                // TODO use knn to narrow the search. now one step is O(n^2), with knn it will be O(kn)
-//                change = (distances[tour[i]][tour[i + 1]] + distances[tour[j]][tour[(j + 1) % tour.size()]]) -
-//                         (distances[tour[i]][tour[j]] + distances[tour[i + 1]][tour[(j + 1) % tour.size()]]);
-//                if (change > best_change) {
-//                    best_change = change;
-//                    best_i = i;
-//                    best_j = j;
-//                }
-//            }
-//        }
-//        if (best_change > 0) {
-//            reverse(tour.begin() + best_i + 1, tour.begin() + best_j + 1);
-//        }
-//    } while ((best_change > 0) & (deadline == nullptr or (system_clock::now() < *deadline)));
-//
-//    return tour;
-//}
+vector<int> TSP::local_2opt_no_knn(vector<int> tour, Grid<int> &distances, Grid<uint16_t> &knn,
+                                   time_point<system_clock, duration<long, ratio<1, 1000000000>>> *deadline) {
+    int best_change;
+    do {
+        best_change = 0.;
+        unsigned best_i, best_j;
+        int change;
+        for (unsigned i = 0; i < tour.size() - 2; i++) {
+            for (unsigned j = i + 2; j < tour.size(); j++) {
+                change = (distances[tour[i]][tour[i + 1]] + distances[tour[j]][tour[(j + 1) % tour.size()]]) -
+                         (distances[tour[i]][tour[j]] + distances[tour[i + 1]][tour[(j + 1) % tour.size()]]);
+                if (change > best_change) {
+                    best_change = change;
+                    best_i = i;
+                    best_j = j;
+                }
+            }
+        }
+        if (best_change > 0) {
+            reverse(tour.begin() + best_i + 1, tour.begin() + best_j + 1);
+        }
+    } while ((best_change > 0) & (deadline == nullptr or (system_clock::now() < *deadline)));
 
+    return tour;
+}

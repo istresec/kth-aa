@@ -25,10 +25,13 @@ public:
     static vector<int> local_2opt(vector<int> tour, Grid<int> &distances, Grid<uint16_t> &knearest,
                                   time_point<system_clock, duration<long, ratio<1, 1000000000>>> *deadline);
 
+    static vector<int> local_2opt_no_knn(vector<int> tour, Grid<int> &distances, Grid<uint16_t> &knn,
+                                         time_point<system_clock, duration<long, ratio<1, 1000000000>>> *deadline);
+
     static int tour_distance(const vector<pair<double, double>> &cities, vector<int> tour);
 
     static vector<pair<double, double>> create_n_cities(int n, int seed = 72);
-};
 
+};
 
 #endif //KTH_AA_TSP_H
