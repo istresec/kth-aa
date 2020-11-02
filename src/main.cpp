@@ -11,32 +11,32 @@ using namespace chrono;
 bool DEBUG = false;
 
 void measure_preprocessing_time(vector<pair<double, double>> &cities, VariadicTable<string, double, double> &vt) {
-    system_clock::time_point start;
+    steady_clock::time_point start;
     duration<double> elapsed{};
 
-    start = high_resolution_clock::now();
+    start = steady_clock::now();
     auto distances = distance_matrix(cities);
-    elapsed = high_resolution_clock::now() - start;
+    elapsed = steady_clock::now() - start;
     vt.addRow("distance_matrix", -1, elapsed.count());
 
-    start = high_resolution_clock::now();
+    start = steady_clock::now();
     k_nearest_neighbors<uint16_t>(*distances, 20);
-    elapsed = high_resolution_clock::now() - start;
+    elapsed = steady_clock::now() - start;
     vt.addRow("knn k=20", -1, elapsed.count());
 
-    start = high_resolution_clock::now();
+    start = steady_clock::now();
     k_nearest_neighbors<uint16_t>(*distances, 80);
-    elapsed = high_resolution_clock::now() - start;
+    elapsed = steady_clock::now() - start;
     vt.addRow("knn k=80", -1, elapsed.count());
 
-    start = high_resolution_clock::now();
+    start = steady_clock::now();
     k_nearest_neighbors<uint16_t>(*distances, 150);
-    elapsed = high_resolution_clock::now() - start;
+    elapsed = steady_clock::now() - start;
     vt.addRow("knn k=150", -1, elapsed.count());
 
-    start = high_resolution_clock::now();
+    start = steady_clock::now();
     k_nearest_neighbors<uint16_t>(*distances, 999);
-    elapsed = high_resolution_clock::now() - start;
+    elapsed = steady_clock::now() - start;
     vt.addRow("knn k=999", -1, elapsed.count());
 }
 
@@ -46,11 +46,11 @@ void demo_alg(const string &alg_name, vector<pair<double, double>> &cities, Vari
         cout << alg_name << ": ";
     }
 
-    auto start = high_resolution_clock::now();
+    auto start = steady_clock::now();
     auto distances = distance_matrix(cities);
     auto tour = construction_alg(cities, *distances);
 
-    duration<double> elapsed = high_resolution_clock::now() - start;
+    duration<double> elapsed = steady_clock::now() - start;
     int distance = TSP::tour_distance(cities, tour);
     if (DEBUG) {
         for (int i: tour) {
@@ -69,20 +69,21 @@ void demo_2opt(
         int k,
         vector<int> (*construction_alg)(const vector<pair<double, double>> &, Grid<int> &),
         vector<int> (*opt_alg)(vector<int>, Grid<int> &, Grid<uint16_t> &,
-                               time_point<system_clock, duration<long, ratio<1, 1000000000>>> *) = TSP::local_2opt) {
+                               time_point<steady_clock, duration<long long int, ratio<1, 1000000000>>> *) = TSP::local_2opt) {
     if (DEBUG) {
         cout << alg_name;
     }
 
-    time_point<system_clock, duration<long, ratio<1, 1000000000>>> deadline = system_clock::now() + milliseconds(2000);
-    auto start = high_resolution_clock::now();
+    time_point<steady_clock, duration<long long int, ratio<1, 1000000000>>> deadline =
+            steady_clock::now() + milliseconds(1900);
+    auto start = steady_clock::now();
     auto distances = distance_matrix(cities);
     Grid<uint16_t> *knn = k_nearest_neighbors<uint16_t>(*distances, k);
 
     auto tour = construction_alg(cities, *distances);
     tour = opt_alg(tour, *distances, *knn, use_deadline ? &deadline : nullptr);
 
-    duration<double> elapsed = high_resolution_clock::now() - start;
+    duration<double> elapsed = steady_clock::now() - start;
     int distance = TSP::tour_distance(cities, tour);
     if (DEBUG) {
         for (int i: tour) {
