@@ -6,7 +6,6 @@
 #include <chrono>
 
 #include "TSP.h"
-#include "utility.h"
 
 using namespace std;
 using namespace chrono;
@@ -27,9 +26,7 @@ vector<pair<double, double>> TSP::create_n_cities(int n, int seed) {
     cities.reserve(n);
 
     uniform_real_distribution<double> unif(lower_bound, upper_bound);
-    chrono::high_resolution_clock clock;
-    default_random_engine generator;
-    generator.seed(seed);
+    default_random_engine generator(seed);
     for (int i = 0; i < n; i++) {
         cities.emplace_back(pair<double, double>(unif(generator), unif(generator)));
     }
@@ -89,12 +86,13 @@ vector<int> TSP::travel_cw(const vector<pair<double, double>> &cities, Grid<int>
 
     // initialize tours
     vector<int> tours[cities.size()];
-    for (int i = 1; i < cities.size(); i++)
+    for (int i = 1; i < (int) cities.size(); i++)
         tours[i] = vector<int>{i}; // instead of 0, i, 0 just use i
 
     // algorithm
     vector<int> temp_tour;
     vector<int> first, second;
+    vector<int> empty_tour = vector<int>();
     int i, j;
     for (auto &it : s) {
         i = get<0>(it);
@@ -104,7 +102,7 @@ vector<int> TSP::travel_cw(const vector<pair<double, double>> &cities, Grid<int>
             first = tours[i]; // remember tour with endpoint i
             second = tours[j]; // remember tour with endpoint j
             // remove tours with endpoints i and j while a new tour is constructed
-            tours[first.front()] = tours[first.back()] = tours[second.front()] = tours[second.back()] = vector<int>();
+            tours[first.front()] = tours[first.back()] = tours[second.front()] = tours[second.back()] = empty_tour;
 
             if (first.front() == i)
                 reverse(first.begin(), first.end()); // reverse tour with endpoint i if it starts with i
@@ -122,57 +120,87 @@ vector<int> TSP::travel_cw(const vector<pair<double, double>> &cities, Grid<int>
 
     // create final tour
     vector<int> tour = vector<int>();
-    tour.emplace_back(0);
-    for (i = 1; i < cities.size(); i++) {
+    for (i = 1; i < (int) cities.size(); i++) {
         if (not tours[i].empty())
             break;
     }
-    tour.insert(tour.end(), tours[i].begin(), tours[i].end());
+    // check where to place the hub to minimize tour distance (start/end?)
+    if (distances[0][tours[i].front()] < distances[0][tours[i].back()]) {
+        tour.emplace_back(0);
+        tour.insert(tour.end(), tours[i].begin(), tours[i].end());
+    } else {
+        tour = tours[i];
+        tour.emplace_back(0);
+    }
 
     cout << "Returning Clarke Wright.\n";
     return tour;
 }
 
+// TODO: implement if needed
 // Clarke-Wright Sequential Savings Algorithm. City at index 0 used as hub.
 vector<int> TSP::travel_cw_seq(const vector<pair<double, double>> &cities, Grid<int> &distances) {
     // get savings
     vector<tuple<int, int, int>> s = savings(cities, distances);
 
     // initialize tours
-    vector<vector<int>> tours = vector<vector<int >>();
-    for (int i = 1; i < cities.size(); i++) {
-        tours.emplace_back(vector<int>{i}); // instead of 0, i, 0 just use i
+    vector<int> tours[cities.size()];
+    for (int i = 1; i < (int) cities.size(); i++)
+        tours[i] = vector<int>{i}; // instead of 0, i, 0 just use i
+
+    // algorithm
+    vector<int> temp_tour;
+    vector<int> first, second;
+    vector<int> empty_tour = vector<int>();
+    int i, j;
+    for (auto &it : s) {
+        i = get<0>(it);
+        j = get<1>(it);
+        // if two distinct tours with endpoints i and j exist, if so combine them (O(1))
+        if (not tours[i].empty() and not tours[j].empty() and tours[i].front() != tours[j].front()) {
+            first = tours[i]; // remember tour with endpoint i
+            second = tours[j]; // remember tour with endpoint j
+            // remove tours with endpoints i and j while a new tour is constructed
+            tours[first.front()] = tours[first.back()] = tours[second.front()] = tours[second.back()] = empty_tour;
+
+            if (first.front() == i)
+                reverse(first.begin(), first.end()); // reverse tour with endpoint i if it starts with i
+            if (second.front() != j)
+                reverse(second.begin(), second.end()); // reverse tour with j if it doesn't start with j
+
+            // create new tour by joining the two
+            first.insert(first.end(), second.begin(), second.end());
+
+            // remember endpoints of the new tour in array of endpoints for quick access
+            tours[first.front()] = first;
+            tours[first.back()] = first;
+        }
     }
 
-    // TODO: implement if needed
-
-    return vector<int>();
-}
-
-vector<int> TSP::local_2opt(vector<int> tour, Grid<int> &distances, Grid<int> &knearest,
-                            time_point<system_clock, duration<long, ratio<1, 1000000000>>> *deadline) {
-    // TODO use a tree structure for storing tour so that reverse is fast
-    int best_change;
-    do {
-        best_change = 0.;
-        unsigned best_i, best_j;
-        int change;
-        for (unsigned i = 0; i < tour.size() - 2; i++) {
-            for (unsigned j = i + 2; j < tour.size(); j++) {
-                // TODO use knn to narrow the search. now one step is O(n^2), with knn it will be O(kn)
-                change = (distances[tour[i]][tour[i + 1]] + distances[tour[j]][tour[(j + 1) % tour.size()]]) -
-                         (distances[tour[i]][tour[j]] + distances[tour[i + 1]][tour[(j + 1) % tour.size()]]);
-                if (change > best_change) {
-                    best_change = change;
-                    best_i = i;
-                    best_j = j;
+    vector<int> TSP::local_2opt(vector<int> tour, Grid<int> &distances, Grid<int> &knearest,
+                                time_point<system_clock, duration<long, ratio<1, 1000000000>>> *deadline) {
+        // TODO use a tree structure for storing tour so that reverse is fast
+        int best_change;
+        do {
+            best_change = 0.;
+            unsigned best_i, best_j;
+            int change;
+            for (unsigned i = 0; i < tour.size() - 2; i++) {
+                for (unsigned j = i + 2; j < tour.size(); j++) {
+                    // TODO use knn to narrow the search. now one step is O(n^2), with knn it will be O(kn)
+                    change = (distances[tour[i]][tour[i + 1]] + distances[tour[j]][tour[(j + 1) % tour.size()]]) -
+                             (distances[tour[i]][tour[j]] + distances[tour[i + 1]][tour[(j + 1) % tour.size()]]);
+                    if (change > best_change) {
+                        best_change = change;
+                        best_i = i;
+                        best_j = j;
+                    }
                 }
             }
-        }
-        if (best_change > 0) {
-            reverse(tour.begin() + best_i + 1, tour.begin() + best_j + 1);
-        }
-    } while ((best_change > 0) & (deadline == nullptr or (system_clock::now() < *deadline)));
+            if (best_change > 0) {
+                reverse(tour.begin() + best_i + 1, tour.begin() + best_j + 1);
+            }
+        } while ((best_change > 0) & (deadline == nullptr or (system_clock::now() < *deadline)));
 
-    return tour;
-}
+        return tour;
+    }
