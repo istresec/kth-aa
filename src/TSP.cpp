@@ -12,7 +12,7 @@ using namespace chrono;
 
 vector<int> TSP::travel(const vector<pair<double, double>> &cities) {
     time_point<steady_clock, duration<long long int, ratio<1, 1000000000>>> deadline =
-            steady_clock::now() + milliseconds(1900);
+            steady_clock::now() + milliseconds(1980);
     auto distances = distance_matrix(cities);
     auto tour = travel_cw(cities, *distances);
     if (tour.size() > 1) {
@@ -20,6 +20,7 @@ vector<int> TSP::travel(const vector<pair<double, double>> &cities) {
         // tour = TSP::local_2opt_no_knn(tour, *distances, *knn, &deadline);
         Grid<uint16_t> *knn = k_nearest_neighbors<uint16_t>(*distances, 200);
         tour = TSP::local_2opt(tour, *distances, *knn, &deadline);
+        tour = TSP::local_3opt(tour, *distances, &deadline);
     }
 
     return tour;
@@ -35,8 +36,8 @@ int TSP::tour_distance(const vector<pair<double, double>> &cities, vector<int> t
 }
 
 vector<pair<double, double>> TSP::create_n_cities(int n, int seed) {
-    double lower_bound = -10e6;
-    double upper_bound = 10e6;
+    double lower_bound = -1e6;
+    double upper_bound = 1e6;
     vector<pair<double, double >> cities = vector<pair<double, double >>();
     cities.reserve(n);
 
@@ -290,7 +291,7 @@ vector<int> TSP::local_2opt(vector<int> tour_vector, Grid<int> &distances, Grid<
     return tour_vector;
 }
 
-vector<int> TSP::local_2opt_no_knn(vector<int> tour, Grid<int> &distances, Grid<uint16_t> &knn,
+vector<int> TSP::local_2opt_no_knn(vector<int> tour, Grid<int> &distances, Grid<uint16_t> &knearest,
                                    time_point<steady_clock, duration<long long int, ratio<1, 1000000000>>> *deadline) {
     int best_change;
     do {
@@ -313,6 +314,28 @@ vector<int> TSP::local_2opt_no_knn(vector<int> tour, Grid<int> &distances, Grid<
         }
     } while ((best_change > 0) and
              (deadline == nullptr or (*deadline > steady_clock::now())));
+
+    return tour;
+}
+
+// 3-opt impl. based on pseudocode from https://en.wikipedia.org/wiki/3-opt
+vector<int> TSP::local_3opt(vector<int> tour, Grid<int> &distances,
+                            time_point<steady_clock, duration<long long int, ratio<1, 1000000000>>> *deadline) {
+    bool better;
+    do {
+        int n = tour.size();
+        better = false;
+        for (int i = 0; i < n; i++) {
+            for (int j = i + 2; j < n; j++) {
+                for (int k = j + 2; k < n + (int) (i > 0); k++) {
+                    if (deadline != nullptr and not (*deadline > steady_clock::now()))
+                        break;
+                    if (reverse_segment_3opt(&tour, i, j, k, distances) > 0)
+                        better = true;
+                }
+            }
+        }
+    } while (better and (deadline == nullptr or (*deadline > steady_clock::now())));
 
     return tour;
 }

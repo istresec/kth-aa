@@ -94,6 +94,37 @@ void demo_2opt(
     vt.addRow(alg_name, distance, elapsed.count());
 }
 
+void demo_3opt(
+        const string &alg_name,
+        vector<pair<double, double>> &cities,
+        VariadicTable<string, int, double> &vt,
+        bool use_deadline,
+        vector<int> (*construction_alg)(const vector<pair<double, double>> &, Grid<int> &),
+        vector<int> (*opt_alg)(vector<int>, Grid<int> &,
+                               time_point<steady_clock, duration<long long int, ratio<1, 1000000000>>> *) = TSP::local_3opt) {
+    if (DEBUG) {
+        cout << alg_name;
+    }
+
+    time_point<steady_clock, duration<long long int, ratio<1, 1000000000>>> deadline =
+            steady_clock::now() + seconds(180);
+    auto start = steady_clock::now();
+    auto distances = distance_matrix(cities);
+
+    auto tour = construction_alg(cities, *distances);
+    tour = opt_alg(tour, *distances, use_deadline ? &deadline : nullptr);
+
+    duration<double> elapsed = steady_clock::now() - start;
+    int distance = TSP::tour_distance(cities, tour);
+    if (DEBUG) {
+        for (int i: tour) {
+            cout << i << " ";
+        }
+        cout << endl;
+    }
+    vt.addRow(alg_name, distance, elapsed.count());
+}
+
 int main(int, char **) {
     ios::sync_with_stdio(false);
     cin.tie(nullptr);
@@ -121,13 +152,16 @@ int main(int, char **) {
     measure_preprocessing_time(cities, vt);
     vt.print(cout);
 
-    demo_alg("Naive", cities, vt, TSP::travel_naive);
-    demo_2opt("Naive 2opt-20", cities, vt, true, 20, TSP::travel_naive);
-    demo_2opt("Naive 2opt-80", cities, vt, true, 80, TSP::travel_naive);
-    vt.print(cout);
+//    demo_alg("Naive", cities, vt, TSP::travel_naive);
+//    demo_2opt("Naive 2opt-20", cities, vt, true, 20, TSP::travel_naive);
+//    demo_2opt("Naive 2opt-80", cities, vt, true, 80, TSP::travel_naive);
+//    demo_3opt("Naive 3opt", cities, vt, true, TSP::travel_naive);
+//    vt.print(cout);
     demo_alg("CW", cities, vt, TSP::travel_cw);
-    demo_2opt("CW 2opt-20", cities, vt, true, 20, TSP::travel_cw);
-    demo_2opt("CW 2opt-80", cities, vt, true, 80, TSP::travel_cw);
+    demo_2opt("CW 2opt-20", cities, vt, false, 20, TSP::travel_cw);
+    demo_2opt("CW 2opt-80", cities, vt, false, 80, TSP::travel_cw);
+    demo_2opt("Naive 2opt no knn", cities, vt, false, 20, TSP::travel_cw, TSP::local_2opt_no_knn);
+    demo_3opt("CW 3opt", cities, vt, false, TSP::travel_cw);
     vt.print(cout);
 
     // No deadlines (slow, therefore at end)
@@ -137,16 +171,16 @@ int main(int, char **) {
 //    vt.print(cout);
 //    demo_2opt("Naive 2opt-999", cities, vt, false, 999, TSP::travel_naive);
 //    vt.print(cout);
-    demo_2opt("CW 2opt-20 NO deadline", cities, vt, false, 20, TSP::travel_cw);
-    vt.print(cout);
-    demo_2opt("CW 2opt-80 NO deadline", cities, vt, false, 80, TSP::travel_cw);
-    vt.print(cout);
-    demo_2opt("CW 2opt-999", cities, vt, false, 999, TSP::travel_cw);
-    vt.print(cout);
+//    demo_2opt("CW 2opt-20 NO deadline", cities, vt, false, 20, TSP::travel_cw);
+//    vt.print(cout);
+//    demo_2opt("CW 2opt-80 NO deadline", cities, vt, false, 80, TSP::travel_cw);
+//    vt.print(cout);
+//    demo_2opt("CW 2opt-999", cities, vt, false, 999, TSP::travel_cw);
+//    vt.print(cout);
 //    demo_2opt("Naive 2opt no knn", cities, vt, false, 20, TSP::travel_naive, TSP::local_2opt_no_knn);
 //    vt.print(cout);
-    demo_2opt("CW 2opt no knn", cities, vt, false, 20, TSP::travel_cw, TSP::local_2opt_no_knn);
-    vt.print(cout);
+//    demo_2opt("CW 2opt no knn", cities, vt, false, 20, TSP::travel_cw, TSP::local_2opt_no_knn);
+//    vt.print(cout);
 
     return 0;
 }

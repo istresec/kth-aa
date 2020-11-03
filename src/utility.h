@@ -91,4 +91,47 @@ inline Grid<T> *k_nearest_neighbors(Grid<U> &distances, int k) {
     return knn;
 }
 
+// reverse tour segment if it makes the tour shorter given three vertices (each vertex is used for its left edge)
+template<class T, class U>
+inline int reverse_segment_3opt(vector<T> *tour, int i, int j, int k, Grid<U> &distances) {
+    int a = (*tour)[(i - 1 + tour->size()) % tour->size()];
+    int b = (*tour)[i];
+    int c = (*tour)[j - 1];
+    int d = (*tour)[j];
+    int e = (*tour)[k - 1];
+    int f = (*tour)[k % (*tour).size()];
+
+    // original distance
+    int d0 = distances[a][b] + distances[c][d] + distances[e][f];
+
+    int d1 = distances[a][c] + distances[b][d] + distances[e][f];
+    if (d0 > d1) {
+        reverse(tour->begin() + i, tour->begin() + j);
+        return -d0 + d1;
+    }
+
+    int d2 = distances[a][b] + distances[c][e] + distances[d][f];
+    if (d0 > d2) {
+        reverse(tour->begin() + j, tour->begin() + k);
+        return -d0 + d2;
+    }
+
+    int d4 = distances[f][b] + distances[c][d] + distances[e][a];
+    if (d0 > d4) {
+        reverse(tour->begin() + i, tour->begin() + k);
+        return -d0 + d2;
+    }
+
+    int d3 = distances[a][d] + distances[e][b] + distances[c][f];
+    if (d0 > d3) {
+        vector<int> temp_tour = vector<int>{};
+        temp_tour.insert(temp_tour.end(), tour->begin() + j, tour->begin() + k);
+        temp_tour.insert(temp_tour.end(), tour->begin() + i, tour->begin() + j);
+        copy_n(temp_tour.begin(), temp_tour.size(), &(*tour)[i]);
+        return -d0 + d3;
+    }
+
+    return 0;
+}
+
 #endif //KTH_AA_UTILITY_H
