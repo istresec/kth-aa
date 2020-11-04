@@ -9,6 +9,7 @@ using namespace std;
 using namespace chrono;
 
 bool DEBUG = false;
+int DEADLINE = 1950;
 
 void measure_preprocessing_time(vector<pair<double, double>> &cities, VariadicTable<string, int, double> &vt) {
     steady_clock::time_point start;
@@ -40,18 +41,18 @@ void measure_preprocessing_time(vector<pair<double, double>> &cities, VariadicTa
     vt.addRow("knn k=999", -1, elapsed.count());
 }
 
-void demo_alg(const string &alg_name, vector<pair<double, double>> &cities, VariadicTable<string, int, double> &vt,
-              vector<int> (*construction_alg)(const vector<pair<double, double>> &, Grid<int> &)) {
+void demo_cw_alg(const string &alg_name, vector<pair<double, double>> &cities, VariadicTable<string, int, double> &vt,
+                 vector<int> (*construction_alg)(const vector<pair<double, double>> &, Grid<int> &, int), int hub = 0) {
     if (DEBUG) {
         cout << alg_name << ": ";
     }
 
     auto start = steady_clock::now();
     auto distances = distance_matrix(cities);
-    auto tour = construction_alg(cities, *distances);
+    auto tour = construction_alg(cities, *distances, hub);
 
     duration<double> elapsed = steady_clock::now() - start;
-    int distance = TSP::tour_distance(cities, tour);
+    int distance = tour_distance(*distances, tour);
     if (DEBUG) {
         for (int i: tour) {
             cout << i << " ";
@@ -61,61 +62,36 @@ void demo_alg(const string &alg_name, vector<pair<double, double>> &cities, Vari
     vt.addRow(alg_name, distance, elapsed.count());
 }
 
-void demo_2opt(
-        const string &alg_name,
+void demo_cw_opt(
+        string alg_name,
         vector<pair<double, double>> &cities,
         VariadicTable<string, int, double> &vt,
         bool use_deadline,
         int k,
-        vector<int> (*construction_alg)(const vector<pair<double, double>> &, Grid<int> &),
+        vector<int> (*construction_alg)(const vector<pair<double, double>> &, Grid<int> &, int),
         vector<int> (*opt_alg)(vector<int>, Grid<int> &, Grid<uint16_t> &,
-                               time_point<steady_clock, duration<long long int, ratio<1, 1000000000>>> *) = TSP::local_2opt) {
+                               time_point<steady_clock, duration<long long int, ratio<1, 1000000000>>> *),
+        vector<int> (*opt_alg2)(vector<int>, Grid<int> &, Grid<uint16_t> &,
+                                time_point<steady_clock, duration<long long int, ratio<1, 1000000000>>> *) = nullptr) {
+    alg_name = use_deadline ? alg_name : alg_name + " NO deadline";
     if (DEBUG) {
         cout << alg_name;
     }
 
     time_point<steady_clock, duration<long long int, ratio<1, 1000000000>>> deadline =
-            steady_clock::now() + milliseconds(1900);
+            steady_clock::now() + milliseconds(DEADLINE);
     auto start = steady_clock::now();
     auto distances = distance_matrix(cities);
     Grid<uint16_t> *knn = k_nearest_neighbors<uint16_t>(*distances, k);
 
-    auto tour = construction_alg(cities, *distances);
+    auto tour = construction_alg(cities, *distances, 0);
     tour = opt_alg(tour, *distances, *knn, use_deadline ? &deadline : nullptr);
-
-    duration<double> elapsed = steady_clock::now() - start;
-    int distance = TSP::tour_distance(cities, tour);
-    if (DEBUG) {
-        for (int i: tour) {
-            cout << i << " ";
-        }
-        cout << endl;
-    }
-    vt.addRow(alg_name, distance, elapsed.count());
-}
-
-void demo_3opt(
-        const string &alg_name,
-        vector<pair<double, double>> &cities,
-        VariadicTable<string, int, double> &vt,
-        bool use_deadline,
-        vector<int> (*construction_alg)(const vector<pair<double, double>> &, Grid<int> &),
-        vector<int> (*opt_alg)(vector<int>, Grid<int> &,
-                               time_point<steady_clock, duration<long long int, ratio<1, 1000000000>>> *) = TSP::local_3opt) {
-    if (DEBUG) {
-        cout << alg_name;
+    if (opt_alg2 != nullptr) {
+        tour = opt_alg(tour, *distances, *knn, use_deadline ? &deadline : nullptr);
     }
 
-    time_point<steady_clock, duration<long long int, ratio<1, 1000000000>>> deadline =
-            steady_clock::now() + seconds(180);
-    auto start = steady_clock::now();
-    auto distances = distance_matrix(cities);
-
-    auto tour = construction_alg(cities, *distances);
-    tour = opt_alg(tour, *distances, use_deadline ? &deadline : nullptr);
-
     duration<double> elapsed = steady_clock::now() - start;
-    int distance = TSP::tour_distance(cities, tour);
+    int distance = tour_distance(*distances, tour);
     if (DEBUG) {
         for (int i: tour) {
             cout << i << " ";
@@ -133,7 +109,7 @@ int main(int, char **) {
 
     int n = 1000;
     vector<int> tour;
-    auto cities = TSP::create_n_cities(n);
+    auto cities = create_n_cities(n, 720);
     VariadicTable<string, int, double> vt({"Algo", "Distance", "Time elapsed"});
 
     // logging
@@ -153,34 +129,28 @@ int main(int, char **) {
     vt.print(cout);
 
 //    demo_alg("Naive", cities, vt, TSP::travel_naive);
-//    demo_2opt("Naive 2opt-20", cities, vt, true, 20, TSP::travel_naive);
-//    demo_2opt("Naive 2opt-80", cities, vt, true, 80, TSP::travel_naive);
-//    demo_3opt("Naive 3opt", cities, vt, true, TSP::travel_naive);
+//    demo_cw_opt("Naive 2opt-20", cities, vt, true, 20, TSP::travel_naive, TSP::local_2opt);
+//    demo_cw_opt("Naive 2opt-80", cities, vt, true, 80, TSP::travel_naive, TSP::local_2opt);
+//    demo_cw_opt("Naive 3opt", cities, vt, true, 20, TSP::travel_naive, TSP::local_3opt);
 //    vt.print(cout);
-    demo_alg("CW", cities, vt, TSP::travel_cw);
-    demo_2opt("CW 2opt-20", cities, vt, false, 20, TSP::travel_cw);
-    demo_2opt("CW 2opt-80", cities, vt, false, 80, TSP::travel_cw);
-    demo_2opt("Naive 2opt no knn", cities, vt, false, 20, TSP::travel_cw, TSP::local_2opt_no_knn);
-    demo_3opt("CW 3opt", cities, vt, false, TSP::travel_cw);
-    vt.print(cout);
 
-    // No deadlines (slow, therefore at end)
-//    demo_2opt("Naive 2opt-20 NO deadline", cities, vt, false, 20, TSP::travel_naive);
-//    vt.print(cout);
-//    demo_2opt("Naive 2opt-80 NO deadline", cities, vt, false, 80, TSP::travel_naive);
-//    vt.print(cout);
-//    demo_2opt("Naive 2opt-999", cities, vt, false, 999, TSP::travel_naive);
-//    vt.print(cout);
-//    demo_2opt("CW 2opt-20 NO deadline", cities, vt, false, 20, TSP::travel_cw);
-//    vt.print(cout);
-//    demo_2opt("CW 2opt-80 NO deadline", cities, vt, false, 80, TSP::travel_cw);
-//    vt.print(cout);
-//    demo_2opt("CW 2opt-999", cities, vt, false, 999, TSP::travel_cw);
-//    vt.print(cout);
-//    demo_2opt("Naive 2opt no knn", cities, vt, false, 20, TSP::travel_naive, TSP::local_2opt_no_knn);
-//    vt.print(cout);
-//    demo_2opt("CW 2opt no knn", cities, vt, false, 20, TSP::travel_cw, TSP::local_2opt_no_knn);
-//    vt.print(cout);
+    demo_cw_alg("CW", cities, vt, TSP::travel_cw);
+    demo_cw_opt("CW 2opt-20", cities, vt, true, 20, TSP::travel_cw, TSP::local_2opt);
+    demo_cw_opt("CW 2opt-80", cities, vt, true, 80, TSP::travel_cw, TSP::local_2opt);
+//    demo_cw_opt("CW 2opt-150", cities, vt, true, 150, TSP::travel_cw, TSP::local_2opt);
+//    demo_cw_opt("CW 2opt-999", cities, vt, false, 999, TSP::travel_cw, TSP::local_2opt);
+//    demo_cw_opt("CW 2opt no knn", cities, vt, false, 20, TSP::travel_cw, TSP::local_2opt_no_knn);
+    demo_cw_opt("CW 3opt-20", cities, vt, true, 20, TSP::travel_cw, TSP::local_3opt);
+    demo_cw_opt("CW 3opt-80", cities, vt, true, 80, TSP::travel_cw, TSP::local_3opt);
+    demo_cw_opt("CW 3opt-150", cities, vt, true, 150, TSP::travel_cw, TSP::local_3opt);
+    demo_cw_opt("CW 3opt-200", cities, vt, true, 200, TSP::travel_cw, TSP::local_3opt);
+    demo_cw_opt("CW 3opt no knn", cities, vt, true, 20, TSP::travel_cw, TSP::local_3opt_no_knn);
+    demo_cw_opt("CW 3opt no knn sequential", cities, vt, true, 20, TSP::travel_cw, TSP::local_3opt_no_knn_sequential);
+    demo_cw_opt("CW 2opt-20 + 3opt-20", cities, vt, true, 20, TSP::travel_cw,
+                TSP::local_2opt, TSP::local_3opt);
+    demo_cw_opt("CW 2opt-20 + 3opt no knn sequential", cities, vt, true, 20, TSP::travel_cw,
+                TSP::local_2opt, TSP::local_3opt_no_knn_sequential);
+    vt.print(cout);
 
     return 0;
 }

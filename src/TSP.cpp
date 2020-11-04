@@ -2,7 +2,6 @@
 #include <vector>
 #include <tuple>
 #include <algorithm>
-#include <random>
 #include <chrono>
 
 #include "TSP.h"
@@ -14,50 +13,51 @@ vector<int> TSP::travel(const vector<pair<double, double>> &cities) {
     time_point<steady_clock, duration<long long int, ratio<1, 1000000000>>> deadline =
             steady_clock::now() + milliseconds(1980);
     auto distances = distance_matrix(cities);
-    auto tour = travel_cw(cities, *distances);
-    if (tour.size() > 1) {
-        // Grid<uint16_t> *knn = nullptr;
-        // tour = TSP::local_2opt_no_knn(tour, *distances, *knn, &deadline);
-        Grid<uint16_t> *knn = k_nearest_neighbors<uint16_t>(*distances, 200);
+    vector<int> tour;
+    if (cities.size() <= 2) {
+        tour = vector<int>();
+        for (unsigned i = 0; i < cities.size(); i++) tour.emplace_back();
+    } else if (cities.size() <= 13) {
+        tour = travel_bruteforce(cities, *distances);
+    } else {
+        tour = travel_cw(cities, *distances);
+//    Grid<uint16_t> *knn = nullptr;
+//    tour = TSP::local_2opt_no_knn(tour, *distances, *knn, &deadline);
+        Grid<uint16_t> *knn = k_nearest_neighbors<uint16_t>(*distances, 150);
         tour = TSP::local_2opt(tour, *distances, *knn, &deadline);
-        tour = TSP::local_3opt(tour, *distances, &deadline);
+        tour = TSP::local_3opt_no_knn_sequential(tour, *distances, *knn, &deadline);
     }
-
     return tour;
-}
-
-int TSP::tour_distance(const vector<pair<double, double>> &cities, vector<int> tour) {
-    int distance = 0;
-    auto tsp_table = distance_matrix(cities);
-    for (unsigned i = 0; i < tour.size(); i++) {
-        distance += (*tsp_table)[tour[i]][tour[(i + 1) % cities.size()]];
-    }
-    return distance;
-}
-
-vector<pair<double, double>> TSP::create_n_cities(int n, int seed) {
-    double lower_bound = -1e6;
-    double upper_bound = 1e6;
-    vector<pair<double, double >> cities = vector<pair<double, double >>();
-    cities.reserve(n);
-
-    uniform_real_distribution<double> unif(lower_bound, upper_bound);
-    default_random_engine generator(seed);
-    for (int i = 0; i < n; i++) {
-        cities.emplace_back(pair<double, double>(unif(generator), unif(generator)));
-    }
-    return cities;
 }
 
 inline bool compare_savings(tuple<int, int, int> t1, tuple<int, int, int> t2) {
     return get<2>(t1) > get<2>(t2);
 }
 
-vector<tuple<int, int, int>> savings(const vector<pair<double, double>> &cities, Grid<int> &distances) {
+vector<int> TSP::travel_bruteforce(const vector<pair<double, double>> &cities, Grid<int> &distances) {
+    auto city_indices = vector<int>();
+    city_indices.reserve(cities.size());
+    for (unsigned i = 0; i < cities.size(); i++) city_indices.emplace_back(i);
+
+    auto best = city_indices;
+    int best_distance = -1;
+    do {
+        int current_distance = tour_distance(distances, city_indices);
+        if (best_distance == -1 or current_distance < best_distance) {
+            best_distance = current_distance;
+            best = city_indices;
+        }
+    } while (next_permutation(city_indices.begin() + 1, city_indices.end()));
+
+    return best;
+}
+
+vector<tuple<int, int, int>> savings(const vector<pair<double, double>> &cities, Grid<int> &distances, int hub) {
     vector<tuple<int, int, int >> savings = vector<tuple<int, int, int >>();
-    for (unsigned i = 1; i < cities.size() - 1; i++) {
+    for (unsigned i = 0; i < cities.size() - 1; i++) {
+        if (i == hub) continue;
         for (unsigned j = i + 1; j < cities.size(); j++) {
-            savings.emplace_back(make_tuple(i, j, distances[0][i] + distances[0][j] - distances[i][j]));
+            savings.emplace_back(make_tuple(i, j, distances[hub][i] + distances[hub][j] - distances[i][j]));
         }
     }
     sort(savings.begin(), savings.end(), compare_savings);
@@ -84,29 +84,33 @@ vector<int> TSP::travel_naive(const vector<pair<double, double>> &cities, Grid<i
 }
 
 // Nearest Neighbour Algorithm - pick random vertex and go the shortest distance you can
-vector<int> TSP::travel_nn(vector<pair<double, double>> cities, Grid<int> &distances) {
+vector<int> TSP::travel_nn(const vector<pair<double, double>> &cities, Grid<int> &distances) {
     vector<int> tour = vector<int>();
     return tour;
 }
 
 // Clarke-Wright Savings Algorithm. City at index 0 used as hub.
-vector<int> TSP::travel_cw(const vector<pair<double, double>> &cities, Grid<int> &distances) {
+vector<int> TSP::travel_cw(const vector<pair<double, double>> &cities, Grid<int> &distances, int hub) {
     // if only one city
     if (cities.size() == 1)
         return vector<int>{0};
 
-    // get savings
-    vector<tuple<int, int, int>> s = savings(cities, distances);
+    vector<tuple<int, int, int>> s = savings(cities, distances, hub);
 
     // initialize tours
     vector<int> tours[cities.size()];
-    for (int i = 1; i < (int) cities.size(); i++)
-        tours[i] = vector<int>{i}; // instead of 0, i, 0 just use i
+    vector<int> empty_tour = vector<int>();
+    for (int i = 0; i < (int) cities.size(); i++) {
+        if (i == hub) {
+            tours[i] = empty_tour;
+        } else {
+            tours[i] = vector<int>{i}; // instead of 0, i, 0 just use i
+        }
+    }
 
     // algorithm
     vector<int> temp_tour;
     vector<int> first, second;
-    vector<int> empty_tour = vector<int>();
     int i, j;
     for (auto &it : s) {
         i = get<0>(it);
@@ -138,76 +142,9 @@ vector<int> TSP::travel_cw(const vector<pair<double, double>> &cities, Grid<int>
         if (not tours[i].empty())
             break;
     }
-    // check where to place the hub to minimize tour distance (start/end?)
-    if (distances[0][tours[i].front()] < distances[0][tours[i].back()]) {
-        tour.emplace_back(0);
-        tour.insert(tour.end(), tours[i].begin(), tours[i].end());
-    } else {
-        tour = tours[i];
-        tour.emplace_back(0);
-    }
 
-    return tour;
-}
-
-// TODO: implement if needed
-// Clarke-Wright Sequential Savings Algorithm. City at index 0 used as hub.
-vector<int> TSP::travel_cw_seq(const vector<pair<double, double>> &cities, Grid<int> &distances) {
-    // if only one city
-    if (cities.size() == 1)
-        return vector<int>{0};
-
-    // get savings
-    vector<tuple<int, int, int>> s = savings(cities, distances);
-
-    // initialize tours
-    vector<int> tours[cities.size()];
-    for (int i = 1; i < (int) cities.size(); i++)
-        tours[i] = vector<int>{i}; // instead of 0, i, 0 just use i
-
-    // algorithm
-    vector<int> temp_tour;
-    vector<int> first, second;
-    vector<int> empty_tour = vector<int>();
-    int i, j;
-    for (auto &it : s) {
-        i = get<0>(it);
-        j = get<1>(it);
-        // if two distinct tours with endpoints i and j exist, if so combine them (O(1))
-        if (not tours[i].empty() and not tours[j].empty() and tours[i].front() != tours[j].front()) {
-            first = tours[i]; // remember tour with endpoint i
-            second = tours[j]; // remember tour with endpoint j
-            // remove tours with endpoints i and j while a new tour is constructed
-            tours[first.front()] = tours[first.back()] = tours[second.front()] = tours[second.back()] = empty_tour;
-
-            if (first.front() == i)
-                reverse(first.begin(), first.end()); // reverse tour with endpoint i if it starts with i
-            if (second.front() != j)
-                reverse(second.begin(), second.end()); // reverse tour with j if it doesn't start with j
-
-            // create new tour by joining the two
-            first.insert(first.end(), second.begin(), second.end());
-
-            // remember endpoints of the new tour in array of endpoints for quick access
-            tours[first.front()] = first;
-            tours[first.back()] = first;
-        }
-    }
-
-    // create final tour
-    vector<int> tour = vector<int>();
-    for (i = 1; i < (int) cities.size(); i++) {
-        if (not tours[i].empty())
-            break;
-    }
-    // check where to place the hub to minimize tour distance (start/end?)
-    if (distances[0][tours[i].front()] < distances[0][tours[i].back()]) {
-        tour.emplace_back(0);
-        tour.insert(tour.end(), tours[i].begin(), tours[i].end());
-    } else {
-        tour = tours[i];
-        tour.emplace_back(0);
-    }
+    tour.emplace_back(hub);
+    tour.insert(tour.end(), tours[i].begin(), tours[i].end());
 
     return tour;
 }
@@ -319,18 +256,18 @@ vector<int> TSP::local_2opt_no_knn(vector<int> tour, Grid<int> &distances, Grid<
 }
 
 // 3-opt impl. based on pseudocode from https://en.wikipedia.org/wiki/3-opt
-vector<int> TSP::local_3opt(vector<int> tour, Grid<int> &distances,
-                            time_point<steady_clock, duration<long long int, ratio<1, 1000000000>>> *deadline) {
+vector<int> TSP::local_3opt_no_knn_sequential(vector<int> tour, Grid<int> &distances, Grid<uint16_t> &knn,
+                                              time_point<steady_clock, duration<long long int, ratio<1, 1000000000>>> *deadline) {
     bool better;
     do {
         int n = tour.size();
         better = false;
         for (int i = 0; i < n; i++) {
+            if (deadline != nullptr and not(*deadline > steady_clock::now()))
+                break;
             for (int j = i + 2; j < n; j++) {
                 for (int k = j + 2; k < n + (int) (i > 0); k++) {
-                    if (deadline != nullptr and not (*deadline > steady_clock::now()))
-                        break;
-                    if (reverse_segment_3opt(&tour, i, j, k, distances) > 0)
+                    if (reverse_segment_3opt_seq(&tour, i, j, k, distances, true) > 0)
                         better = true;
                 }
             }
@@ -339,3 +276,93 @@ vector<int> TSP::local_3opt(vector<int> tour, Grid<int> &distances,
 
     return tour;
 }
+
+vector<int> TSP::local_3opt_no_knn(vector<int> tour, Grid<int> &distances, Grid<uint16_t> &knn,
+                                   time_point<steady_clock, duration<long long int, ratio<1, 1000000000>>> *deadline) {
+    bool better;
+    do {
+        int n = tour.size();
+        better = false;
+        int best_diff = 0, best_i, best_j, best_k;
+        for (int i = 0; i < n; i++) {
+            for (int j = i + 2; j < n; j++) {
+                for (int k = j + 2; k < n + (int) (i > 0); k++) {
+                    if (deadline != nullptr and not(*deadline > steady_clock::now()))
+                        break;
+                    int diff = reverse_segment_3opt(&tour, i, j, k, distances, false);
+                    if (diff > best_diff) {
+                        best_i = i, best_j = j, best_k = k;
+                        better = true;
+                    }
+                }
+            }
+        }
+        if (better) {
+            reverse_segment_3opt(&tour, best_i, best_j, best_k, distances, true);
+        }
+    } while (better and (deadline == nullptr or (*deadline > steady_clock::now())));
+
+    return tour;
+}
+
+vector<int> TSP::local_3opt(vector<int> tour, Grid<int> &distances, Grid<uint16_t> &knn,
+                            time_point<steady_clock, duration<long long int, ratio<1, 1000000000>>> *deadline) {
+    bool reverse_seq = true;
+    bool apply_seq = true;
+
+    bool better;
+    int n = tour.size();
+    do {
+        better = false;
+        int best_diff = 0, best_i, best_j, best_k;
+
+        vector<int> city_to_tour_idx(n);
+        for (int tour_idx = 0; tour_idx < n; tour_idx++) {
+            city_to_tour_idx[tour[tour_idx]] = tour_idx;
+        }
+
+        for (int i = 0; i < n; i++) {
+            if (deadline != nullptr and not(*deadline > steady_clock::now()))
+                break;
+            for (int j_knn = 0; j_knn < knn.columns() - 1; j_knn++) {
+                int j = city_to_tour_idx[knn[i][j_knn]];
+                if (i >= j - 1) continue;
+
+                for (int k_knn = j_knn + 1; k_knn < knn.columns(); k_knn++) {
+                    int k = city_to_tour_idx[knn[i][k_knn]];
+                    if (j >= k - 1) continue;
+
+                    for (int successor = 0; successor <= 1; successor++) {
+                        int i_current = (i + successor) % n;
+                        int j_current = (j + successor) % n;
+                        int k_current = (k + successor) % n;
+                        if (i_current >= j_current - 1 or j_current >= k_current - 1) continue;
+
+                        int diff = reverse_seq
+                                   ? reverse_segment_3opt_seq(&tour, i_current, j_current, k_current, distances,
+                                                              apply_seq)
+                                   : reverse_segment_3opt(&tour, i_current, j_current, k_current, distances, apply_seq);
+                        if (diff > best_diff) {
+                            if (not apply_seq) {
+                                best_i = i_current, best_j = j_current, best_k = k_current;
+                            }
+                            better = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (better) {
+            if (not apply_seq) {
+                reverse_seq
+                ? reverse_segment_3opt_seq(&tour, best_i, best_j, best_k, distances, true)
+                : reverse_segment_3opt(&tour, best_i, best_j, best_k, distances, true);
+            }
+        }
+
+    } while (better and (deadline == nullptr or (*deadline > steady_clock::now())));
+
+    return tour;
+}
+
