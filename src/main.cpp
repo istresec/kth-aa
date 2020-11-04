@@ -41,6 +41,39 @@ void measure_preprocessing_time(vector<pair<double, double>> &cities, VariadicTa
     vt.addRow("knn k=999", -1, elapsed.count());
 }
 
+void demo_christofides(const string &alg_name, vector<pair<double, double>> &cities,
+                       VariadicTable<string, int, double> &vt, bool use2opt = false, bool use3opt = false, int k = 80) {
+    if (DEBUG) {
+        cout << alg_name << ": ";
+    }
+    time_point<steady_clock, duration<long long int, ratio<1, 1000000000>>> deadline =
+            steady_clock::now() + milliseconds(DEADLINE);
+    auto start = steady_clock::now();
+    auto distances = distance_matrix(cities);
+    auto tour = TSP::travel_christofides<uint16_t, int>(*distances);
+
+    Grid<uint16_t> *knn;
+    if (use2opt or use3opt) {
+        knn = k_nearest_neighbors<uint16_t>(*distances, k);
+        if (use2opt) {
+            tour = TSP::local_2opt(tour, *distances, *knn, &deadline);
+        }
+        if (use3opt) {
+            tour = TSP::local_3opt_no_knn_sequential(tour, *distances, *knn, &deadline);
+        }
+    }
+
+    duration<double> elapsed = steady_clock::now() - start;
+    int distance = tour_distance(*distances, tour);
+    if (DEBUG) {
+        for (int i: tour) {
+            cout << i << " ";
+        }
+        cout << endl;
+    }
+    vt.addRow(alg_name, distance, elapsed.count());
+}
+
 void demo_cw_alg(const string &alg_name, vector<pair<double, double>> &cities, VariadicTable<string, int, double> &vt,
                  vector<int> (*construction_alg)(const vector<pair<double, double>> &, Grid<int> &, int), int hub = 0) {
     if (DEBUG) {
@@ -125,8 +158,8 @@ int main(int, char **) {
         k_nearest_neighbors<uint16_t>(*distances, 10)->print();
     }
 
-    measure_preprocessing_time(cities, vt);
-    vt.print(cout);
+//    measure_preprocessing_time(cities, vt);
+//    vt.print(cout);
 
 //    demo_alg("Naive", cities, vt, TSP::travel_naive);
 //    demo_cw_opt("Naive 2opt-20", cities, vt, true, 20, TSP::travel_naive, TSP::local_2opt);
@@ -134,22 +167,23 @@ int main(int, char **) {
 //    demo_cw_opt("Naive 3opt", cities, vt, true, 20, TSP::travel_naive, TSP::local_3opt);
 //    vt.print(cout);
 
-    demo_cw_alg("CW", cities, vt, TSP::travel_cw);
-    demo_cw_opt("CW 2opt-20", cities, vt, true, 20, TSP::travel_cw, TSP::local_2opt);
+    demo_christofides("Christofides", cities, vt, false, false, 80);
+//    demo_cw_alg("CW", cities, vt, TSP::travel_cw);
+//    demo_cw_opt("CW 2opt-20", cities, vt, true, 20, TSP::travel_cw, TSP::local_2opt);
     demo_cw_opt("CW 2opt-80", cities, vt, true, 80, TSP::travel_cw, TSP::local_2opt);
 //    demo_cw_opt("CW 2opt-150", cities, vt, true, 150, TSP::travel_cw, TSP::local_2opt);
 //    demo_cw_opt("CW 2opt-999", cities, vt, false, 999, TSP::travel_cw, TSP::local_2opt);
 //    demo_cw_opt("CW 2opt no knn", cities, vt, false, 20, TSP::travel_cw, TSP::local_2opt_no_knn);
-    demo_cw_opt("CW 3opt-20", cities, vt, true, 20, TSP::travel_cw, TSP::local_3opt);
-    demo_cw_opt("CW 3opt-80", cities, vt, true, 80, TSP::travel_cw, TSP::local_3opt);
-    demo_cw_opt("CW 3opt-150", cities, vt, true, 150, TSP::travel_cw, TSP::local_3opt);
-    demo_cw_opt("CW 3opt-200", cities, vt, true, 200, TSP::travel_cw, TSP::local_3opt);
-    demo_cw_opt("CW 3opt no knn", cities, vt, true, 20, TSP::travel_cw, TSP::local_3opt_no_knn);
-    demo_cw_opt("CW 3opt no knn sequential", cities, vt, true, 20, TSP::travel_cw, TSP::local_3opt_no_knn_sequential);
-    demo_cw_opt("CW 2opt-20 + 3opt-20", cities, vt, true, 20, TSP::travel_cw,
-                TSP::local_2opt, TSP::local_3opt);
-    demo_cw_opt("CW 2opt-20 + 3opt no knn sequential", cities, vt, true, 20, TSP::travel_cw,
-                TSP::local_2opt, TSP::local_3opt_no_knn_sequential);
+//    demo_cw_opt("CW 3opt-20", cities, vt, true, 20, TSP::travel_cw, TSP::local_3opt);
+//    demo_cw_opt("CW 3opt-80", cities, vt, true, 80, TSP::travel_cw, TSP::local_3opt);
+//    demo_cw_opt("CW 3opt-150", cities, vt, true, 150, TSP::travel_cw, TSP::local_3opt);
+//    demo_cw_opt("CW 3opt-200", cities, vt, true, 200, TSP::travel_cw, TSP::local_3opt);
+//    demo_cw_opt("CW 3opt no knn", cities, vt, true, 20, TSP::travel_cw, TSP::local_3opt_no_knn);
+//    demo_cw_opt("CW 3opt no knn sequential", cities, vt, true, 20, TSP::travel_cw, TSP::local_3opt_no_knn_sequential);
+//    demo_cw_opt("CW 2opt-20 + 3opt-20", cities, vt, true, 20, TSP::travel_cw,
+//                TSP::local_2opt, TSP::local_3opt);
+//    demo_cw_opt("CW 2opt-20 + 3opt no knn sequential", cities, vt, true, 20, TSP::travel_cw,
+//                TSP::local_2opt, TSP::local_3opt_no_knn_sequential);
     vt.print(cout);
 
     return 0;

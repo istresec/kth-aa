@@ -48,6 +48,50 @@ public:
     }
 };
 
+
+class UnionFind {
+public:
+    explicit UnionFind(size_t n) : _rank(n, 0)
+//    , _size(n, 1)
+    {
+        _parent.resize(n);
+        while (n--) _parent[n] = n;
+    }
+
+//    int size(int x) {
+//        return _size[x];
+//    }
+
+    int find(int x) {
+        if (_parent[x] == x) return x;
+        return _parent[x] = find(_parent[x]); // path compression
+    }
+
+    void merge(int x, int y) {
+        x = find(x), y = find(y);
+        if (_rank[x] > _rank[y]) {
+            _parent[y] = x;
+//            _size[x] = _size[x] + _size[y];
+            return;
+        }
+
+        _parent[x] = y;
+//        _size[y] = _size[x] + _size[y];
+        if (_rank[x] == _rank[y]) {
+            _rank[x]++;
+        }
+    }
+
+    bool equiv(int x, int y) {
+        return find(x) == find(y);
+    }
+
+private:
+    vector<int> _parent;
+    vector<int> _rank;
+//    vector<int> _size;
+};
+
 inline double squared_distance(const pair<double, double> &t1, const pair<double, double> &t2) {
     double dx = t1.first - t2.first;
     double dy = t1.second - t2.second;

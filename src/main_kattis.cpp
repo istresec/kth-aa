@@ -17,6 +17,7 @@ int main(int, char **) {
     cin >> n;
     for (int i = 0; i < n; i++) {
         double x, y;
+//        scanf(" %lf %lf", &x, &y);
         cin >> x >> y;
         cities.emplace_back(x, y);
     }
@@ -25,7 +26,7 @@ int main(int, char **) {
 
     tour = TSP::travel(cities);
     for (int i = 0; i < n; i++) {
-        cout << tour[i] << endl;
+        printf("%d\n", tour[i]);
     }
 
     return 0;

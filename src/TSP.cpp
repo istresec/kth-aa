@@ -20,10 +20,11 @@ vector<int> TSP::travel(const vector<pair<double, double>> &cities) {
     } else if (cities.size() <= 13) {
         tour = travel_bruteforce(cities, *distances);
     } else {
-        tour = travel_cw(cities, *distances);
+//        tour = travel_cw(cities, *distances);
+        tour = travel_christofides(*distances);
 //    Grid<uint16_t> *knn = nullptr;
 //    tour = TSP::local_2opt_no_knn(tour, *distances, *knn, &deadline);
-        Grid<uint16_t> *knn = k_nearest_neighbors<uint16_t>(*distances, 150);
+        Grid<uint16_t> *knn = k_nearest_neighbors<uint16_t>(*distances, min((int) (cities.size() - 1), 50));
         tour = TSP::local_2opt(tour, *distances, *knn, &deadline);
         tour = TSP::local_3opt_no_knn_sequential(tour, *distances, *knn, &deadline);
     }
