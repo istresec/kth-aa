@@ -8,6 +8,9 @@
 #include <algorithm>
 #include <cmath>
 #include <random>
+#include <fstream>
+#include <string>
+#include <iomanip>
 
 using namespace std;
 
@@ -106,6 +109,9 @@ template<class T=int>
 inline Grid<T> *distance_matrix(const vector<pair<double, double>> &cities) {
     auto n = cities.size();
     auto matrix = new Grid<T>(n, n);
+    for (unsigned i = 0; i < n; i++) {
+        (*matrix)[i][i] = 0;
+    }
     for (unsigned i = 0; i < n - 1; i++) {
         for (unsigned j = i + 1; j < n; j++) {
             (*matrix)[i][j] = (*matrix)[j][i] = round(sqrt(squared_distance(cities[i], cities[j])));
@@ -157,7 +163,7 @@ inline int reverse_segment_3opt_seq(vector<T> *tour, int i, int j, int k, Grid<U
         if (apply) {
             reverse(tour->begin() + i, tour->begin() + j);
         }
-        return -d0 + d1;
+        return d0 - d1;
     }
 
     int d2 = distances[a][b] + distances[c][e] + distances[d][f];
@@ -165,7 +171,7 @@ inline int reverse_segment_3opt_seq(vector<T> *tour, int i, int j, int k, Grid<U
         if (apply) {
             reverse(tour->begin() + j, tour->begin() + k);
         }
-        return -d0 + d2;
+        return d0 - d2;
     }
 
     int d4 = distances[f][b] + distances[c][d] + distances[e][a];
@@ -173,7 +179,7 @@ inline int reverse_segment_3opt_seq(vector<T> *tour, int i, int j, int k, Grid<U
         if (apply) {
             reverse(tour->begin() + i, tour->begin() + k);
         }
-        return -d0 + d2;
+        return d0 - d2;
     }
 
     int d3 = distances[a][d] + distances[e][b] + distances[c][f];
@@ -184,7 +190,7 @@ inline int reverse_segment_3opt_seq(vector<T> *tour, int i, int j, int k, Grid<U
             temp_tour.insert(temp_tour.end(), tour->begin() + i, tour->begin() + j);
             copy_n(temp_tour.begin(), temp_tour.size(), &(*tour)[i]);
         }
-        return -d0 + d3;
+        return d0 - d3;
     }
 
     return 0;
@@ -233,6 +239,20 @@ inline int reverse_segment_3opt(vector<T> *tour, int i, int j, int k, Grid<U> &d
 
 
     return d0 - best;
+}
+
+void log_cities(const vector<pair<double, double>> &cities, const string &path, const string &name);
+
+template<class T>
+void log_tour(vector<T> tour, const string &path, const string &name) {
+    ofstream outfile(path, ios_base::app);
+    outfile << "tour_name=" << name << "\n";
+    outfile << "tour=[";
+    for (auto c: tour) {
+        outfile << c << ",";
+    }
+    outfile << "]\n";
+    outfile.close();
 }
 
 #endif //KTH_AA_UTILITY_H

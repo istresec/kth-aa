@@ -3,6 +3,7 @@
 #include <array>
 
 #include "TSP.h"
+#include "utility.h"
 #include "VariadicTable.h"
 
 using namespace std;
@@ -10,6 +11,8 @@ using namespace chrono;
 
 bool DEBUG = false;
 int DEADLINE = 1950;
+bool LOG = true;
+string LOG_PATH = "/mnt/terra/xoding/kth-aa/logs/002.log";
 
 void measure_preprocessing_time(vector<pair<double, double>> &cities, VariadicTable<string, int, double> &vt) {
     steady_clock::time_point start;
@@ -52,14 +55,31 @@ void demo_christofides(const string &alg_name, vector<pair<double, double>> &cit
     auto distances = distance_matrix(cities);
     auto tour = TSP::travel_christofides<uint16_t, int>(*distances);
 
+    if (LOG) {
+        log_cities(cities, LOG_PATH, alg_name);
+    }
+    if (LOG) {
+        int distance = tour_distance(*distances, tour);
+        log_tour(tour, LOG_PATH, " 0 --> bare " + to_string(distance));
+    }
+
     Grid<uint16_t> *knn;
     if (use2opt or use3opt) {
         knn = k_nearest_neighbors<uint16_t>(*distances, k);
         if (use2opt) {
             tour = TSP::local_2opt(tour, *distances, *knn, &deadline);
+            if (LOG) {
+                int distance = tour_distance(*distances, tour);
+                log_tour(tour, LOG_PATH, " 1 --> 2opt " + to_string(distance));
+            }
         }
         if (use3opt) {
             tour = TSP::local_3opt_no_knn_sequential(tour, *distances, *knn, &deadline);
+//            tour = TSP::local_3opt(tour, *distances, *knn, &deadline);
+            if (LOG) {
+                int distance = tour_distance(*distances, tour);
+                log_tour(tour, LOG_PATH, " 2 --> 3opt " + to_string(distance));
+            }
         }
     }
 
@@ -71,6 +91,7 @@ void demo_christofides(const string &alg_name, vector<pair<double, double>> &cit
         }
         cout << endl;
     }
+
     vt.addRow(alg_name, distance, elapsed.count());
 }
 
@@ -93,6 +114,13 @@ void demo_cw_alg(const string &alg_name, vector<pair<double, double>> &cities, V
         cout << endl;
     }
     vt.addRow(alg_name, distance, elapsed.count());
+
+    if (LOG) {
+        log_cities(cities, LOG_PATH, alg_name);
+    }
+    if (LOG) {
+        log_tour(tour, LOG_PATH, "d=" + to_string(distance));
+    }
 }
 
 void demo_cw_opt(
@@ -118,9 +146,24 @@ void demo_cw_opt(
     Grid<uint16_t> *knn = k_nearest_neighbors<uint16_t>(*distances, k);
 
     auto tour = construction_alg(cities, *distances, 0);
+    if (LOG) {
+        log_cities(cities, LOG_PATH, alg_name);
+    }
+    if (LOG) {
+        int distance = tour_distance(*distances, tour);
+        log_tour(tour, LOG_PATH, "0 --> bare d=" + to_string(distance));
+    }
     tour = opt_alg(tour, *distances, *knn, use_deadline ? &deadline : nullptr);
+    if (LOG) {
+        int distance = tour_distance(*distances, tour);
+        log_tour(tour, LOG_PATH, "1 --> opt_1 d=" + to_string(distance));
+    }
     if (opt_alg2 != nullptr) {
         tour = opt_alg(tour, *distances, *knn, use_deadline ? &deadline : nullptr);
+        if (LOG) {
+            int distance = tour_distance(*distances, tour);
+            log_tour(tour, LOG_PATH, "2 --> opt_2 d=" + to_string(distance));
+        }
     }
 
     duration<double> elapsed = steady_clock::now() - start;
@@ -142,8 +185,17 @@ int main(int, char **) {
 
     int n = 1000;
     vector<int> tour;
-    auto cities = create_n_cities(n, 720);
+//    auto cities = create_n_cities(n, 720);
     VariadicTable<string, int, double> vt({"Algo", "Distance", "Time elapsed"});
+
+    cin >> n;
+    vector<pair<double, double>> cities;
+    for (int i = 0; i < n; i++) {
+        double x, y;
+//        scanf(" %lf %lf", &x, &y);
+        cin >> x >> y;
+        cities.emplace_back(x, y);
+    }
 
     // logging
     if (DEBUG) {
@@ -167,23 +219,26 @@ int main(int, char **) {
 //    demo_cw_opt("Naive 3opt", cities, vt, true, 20, TSP::travel_naive, TSP::local_3opt);
 //    vt.print(cout);
 
-    demo_christofides("Christofides", cities, vt, false, false, 80);
+    demo_christofides("Christofides", cities, vt, false, false, 150);
+    demo_christofides("Christofides 2opt-150", cities, vt, true, false, 150);
+    demo_christofides("Christofides 2opt-150 3opt_no_knn_sequential", cities, vt, true, true, 150);
+    demo_christofides("Christofides 3opt-150_no_knn_sequential", cities, vt, false, true, 150);
 //    demo_cw_alg("CW", cities, vt, TSP::travel_cw);
 //    demo_cw_opt("CW 2opt-20", cities, vt, true, 20, TSP::travel_cw, TSP::local_2opt);
-    demo_cw_opt("CW 2opt-80", cities, vt, true, 80, TSP::travel_cw, TSP::local_2opt);
-//    demo_cw_opt("CW 2opt-150", cities, vt, true, 150, TSP::travel_cw, TSP::local_2opt);
+//    demo_cw_opt("CW 2opt-80", cities, vt, true, 80, TSP::travel_cw, TSP::local_2opt);
+    demo_cw_opt("CW 2opt-150", cities, vt, true, 150, TSP::travel_cw, TSP::local_2opt);
 //    demo_cw_opt("CW 2opt-999", cities, vt, false, 999, TSP::travel_cw, TSP::local_2opt);
 //    demo_cw_opt("CW 2opt no knn", cities, vt, false, 20, TSP::travel_cw, TSP::local_2opt_no_knn);
 //    demo_cw_opt("CW 3opt-20", cities, vt, true, 20, TSP::travel_cw, TSP::local_3opt);
 //    demo_cw_opt("CW 3opt-80", cities, vt, true, 80, TSP::travel_cw, TSP::local_3opt);
-//    demo_cw_opt("CW 3opt-150", cities, vt, true, 150, TSP::travel_cw, TSP::local_3opt);
+    demo_cw_opt("CW 3opt-150", cities, vt, true, 150, TSP::travel_cw, TSP::local_3opt);
 //    demo_cw_opt("CW 3opt-200", cities, vt, true, 200, TSP::travel_cw, TSP::local_3opt);
 //    demo_cw_opt("CW 3opt no knn", cities, vt, true, 20, TSP::travel_cw, TSP::local_3opt_no_knn);
-//    demo_cw_opt("CW 3opt no knn sequential", cities, vt, true, 20, TSP::travel_cw, TSP::local_3opt_no_knn_sequential);
-//    demo_cw_opt("CW 2opt-20 + 3opt-20", cities, vt, true, 20, TSP::travel_cw,
-//                TSP::local_2opt, TSP::local_3opt);
-//    demo_cw_opt("CW 2opt-20 + 3opt no knn sequential", cities, vt, true, 20, TSP::travel_cw,
-//                TSP::local_2opt, TSP::local_3opt_no_knn_sequential);
+    demo_cw_opt("CW 3opt 150 knn sequential", cities, vt, true, 150, TSP::travel_cw, TSP::local_3opt_no_knn_sequential);
+    demo_cw_opt("CW 2opt-150 + 3opt-150", cities, vt, true, 150, TSP::travel_cw,
+                TSP::local_2opt, TSP::local_3opt);
+    demo_cw_opt("CW 2opt-150 + 3opt no knn sequential", cities, vt, true, 150, TSP::travel_cw,
+                TSP::local_2opt, TSP::local_3opt_no_knn_sequential);
     vt.print(cout);
 
     return 0;

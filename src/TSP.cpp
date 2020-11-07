@@ -173,7 +173,9 @@ inline void local2OptUpdate(Grid<uint16_t> &tour, uint16_t i, uint16_t j) {
 
 vector<int> TSP::local_2opt(vector<int> tour_vector, Grid<int> &distances, Grid<uint16_t> &knn,
                             time_point<steady_clock, duration<long long int, ratio<1, 1000000000>>> *deadline) {
-// TODO use a tree structure for storing tour so that reverse is fast
+    // TODO use a tree structure for storing tour so that reverse is fast
+    bool sequential = false;
+
     uint16_t n = tour_vector.size();
     auto tour = Grid<uint16_t>(n, 2);
     for (int i = 0; i < n; i++) {
@@ -202,6 +204,9 @@ vector<int> TSP::local_2opt(vector<int> tour_vector, Grid<int> &distances, Grid<
                 uint16_t better_b = change1 > change2 ? b : tour[b][0];
 
 //                if (change > 0) { iCannotDoBetter = false; }
+                if (sequential and change > 0) {
+                    local2OptUpdate(tour, better_a, better_b);
+                }
                 if (change > bestChange) {
                     bestChange = change;
                     best_i = better_a;
@@ -217,7 +222,9 @@ vector<int> TSP::local_2opt(vector<int> tour_vector, Grid<int> &distances, Grid<
 //                shouldBeChecked[knn[tour[best_i][1]][j]] = true;
 //                shouldBeChecked[knn[tour[best_j][1]][j]] = true;
 //            }
-            local2OptUpdate(tour, best_i, best_j);
+            if (not sequential) {
+                local2OptUpdate(tour, best_i, best_j);
+            }
         }
     } while ((bestChange > 0) & (deadline == nullptr or (steady_clock::now() < *deadline)));
 

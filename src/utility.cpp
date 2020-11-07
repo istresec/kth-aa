@@ -31,3 +31,14 @@ int tour_distance(Grid<int> &distances, vector<int> tour) {
     }
     return distance;
 }
+
+void log_cities(const vector<pair<double, double>> &cities, const string &path, const string &name) {
+    ofstream outfile(path, ios_base::app);
+    outfile << "\ncities_name=" << name << "\n";
+    outfile << "cities=[";
+    for (unsigned i = 0; i < cities.size(); i++) {
+        outfile << "(" << cities[i].first << "," << cities[i].second << "),";
+    }
+    outfile << "]\n";
+    outfile.close();
+}
