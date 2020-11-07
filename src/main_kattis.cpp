@@ -22,8 +22,6 @@ int main(int, char **) {
         cities.emplace_back(x, y);
     }
 
-    // TODO: if only 10 or less cities just do all combinations
-
     tour = TSP::travel(cities);
     for (int i = 0; i < n; i++) {
         printf("%d\n", tour[i]);
