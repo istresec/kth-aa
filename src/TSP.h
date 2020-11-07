@@ -5,6 +5,8 @@
 #include <vector>
 #include <stack>
 #include <chrono>
+#include <blossom5-v2.05.src/PerfectMatching.h>
+#include <blossom5-v2.05.src/GEOM/GeomPerfectMatching.h>
 
 #include "utility.h"
 
@@ -90,51 +92,108 @@ vector<int> TSP::travel_christofides(Grid<U> &distances) {
     }
 
     // *** Minimum-weight perfect matching ***
-
     // O(n)
-    unordered_map<int, bool> has_been_matched; // store the cities for which the matching has to be found. maps to true if found
-    has_been_matched.reserve(10 * n);
+    auto unmatched = vector<int>();
+    unmatched.reserve(n);
     for (int i = 0; i < n; i++) {
-        if (city_mst_degree[i] % 2) has_been_matched[i] = false;
+        if (city_mst_degree[i] % 2) unmatched.emplace_back(i);
     }
-    if (has_been_matched.size() % 2) {
+    if (unmatched.size() % 2) {
         throw logic_error("Inconsistent state: MST does not have an even number of odd degree nodes!");
     }
 
-    // TODO this is a greedy algorithm. Blossom might be much better (if it is not too slow).
-    // O(n^2)
-    auto maching_candidates = vector<tuple<T, T, U>>(); // i, j, distance
-    maching_candidates.reserve(has_been_matched.size() * (has_been_matched.size() - 1) / 2);
+    bool pm = true;
+    if (pm) {
+        // O(BLOSSOM_V) TODO
+        struct PerfectMatching::Options options;
+        struct GeomPerfectMatching::GPMOptions gpm_options;
+        int *edges;
+        int *weights;
+        int pm_edges = unmatched.size() * (unmatched.size() - 1) / 2;
+        int pm_nodes = unmatched.size();
 
-    // O(n^2)
-    for (auto city_a: has_been_matched) {
-        for (auto city_b: has_been_matched) {
-            if (city_a.first >= city_b.first) continue;
-            maching_candidates.emplace_back(
-                    make_tuple(city_a.first, city_b.first, distances[city_a.first][city_b.first]));
+        vector<PerfectMatching::EdgeId> edge_indices;
+        auto *pm = new PerfectMatching(pm_nodes, pm_edges);
+        for (unsigned i = 0; i < unmatched.size() - 1; i++) {
+            for (unsigned j = i + 1; j < unmatched.size(); j++) {
+                edge_indices.emplace_back(pm->AddEdge(i, j, distances[unmatched[i]][unmatched[j]]));
+            }
         }
-    }
 
-    // O(n^2)
-    make_heap(maching_candidates.begin(), maching_candidates.end(), cmp);
+        pm->options = options;
+        pm->Solve();
+        auto matched_edges = vector<tuple<T, T, U>>();
+        matched_edges.reserve(unmatched.size() / 2);
+        int idx = 0;
+        for (unsigned i = 0; i < unmatched.size() - 1; i++) {
+            for (unsigned j = i + 1; j < unmatched.size(); j++) {
+                if (pm->GetSolution(edge_indices[idx++])) {
+                    matched_edges.emplace_back(
+                            tuple<T, T, U>(unmatched[i], unmatched[j], distances[unmatched[i]][unmatched[j]]));
+                }
+            }
+        }
+        if (matched_edges.size() != unmatched.size() / 2) {
+            throw logic_error("Inconsistent state: Incorrect number of matched edges!");
+        }
+        if (check_perfect_matching) {
+            int res = CheckPerfectMatchingOptimality(node_num, edge_num, edges, weights, pm);
+            printf("check optimality: res=%d (%s)\n", res, (res == 0) ? "ok" : ((res == 1) ? "error" : "fatal error"));
+        }
+        double cost = ComputePerfectMatchingCost(node_num, edge_num, edges, weights, pm);
+        printf("cost = %.1f\n", cost);
+        if (save_filename) SaveMatching(node_num, pm, save_filename);
+        delete pm;
 
-    // O(1)
-    auto matched_edges = vector<tuple<T, T, U>>();
-    matched_edges.reserve(has_been_matched.size() / 2);
 
-    // O(n^2*log(n^2))
-    unsigned matched = 0;
-    while (has_been_matched.size() > matched) {
-        // O(log(n^2))
-        auto next_edge = maching_candidates.front();
-        pop_heap(maching_candidates.begin(), maching_candidates.end(), cmp);
-        maching_candidates.pop_back();
+    } else {
+        // *** Minimum-weight perfect matching ***
+
+        // O(n)
+        unordered_map<int, bool> has_been_matched; // store the cities for which the matching has to be found. maps to true if found
+        has_been_matched.reserve(10 * n);
+        for (int i = 0; i < n; i++) {
+            if (city_mst_degree[i] % 2) has_been_matched[i] = false;
+        }
+        if (has_been_matched.size() % 2) {
+            throw logic_error("Inconsistent state: MST does not have an even number of odd degree nodes!");
+        }
+
+        // TODO this is a greedy algorithm. Blossom might be much better (if it is not too slow).
+        // O(n^2)
+        auto matching_candidates = vector<tuple<T, T, U>>(); // i, j, distance
+        matching_candidates.reserve(has_been_matched.size() * (has_been_matched.size() - 1) / 2);
+
+        // O(n^2)
+        for (auto city_a: has_been_matched) {
+            for (auto city_b: has_been_matched) {
+                if (city_a.first >= city_b.first) continue;
+                matching_candidates.emplace_back(
+                        make_tuple(city_a.first, city_b.first, distances[city_a.first][city_b.first]));
+            }
+        }
+
+        // O(n^2)
+        make_heap(matching_candidates.begin(), matching_candidates.end(), cmp);
 
         // O(1)
-        if (!has_been_matched[get<0>(next_edge)] and !has_been_matched[get<1>(next_edge)]) {
-            has_been_matched[get<0>(next_edge)] = has_been_matched[get<1>(next_edge)] = true;
-            matched += 2;
-            matched_edges.emplace_back(next_edge);
+        auto matched_edges = vector<tuple<T, T, U>>();
+        matched_edges.reserve(has_been_matched.size() / 2);
+
+        // O(n^2*log(n^2))
+        unsigned matched = 0;
+        while (has_been_matched.size() > matched) {
+            // O(log(n^2))
+            auto next_edge = matching_candidates.front();
+            pop_heap(matching_candidates.begin(), matching_candidates.end(), cmp);
+            matching_candidates.pop_back();
+
+            // O(1)
+            if (!has_been_matched[get<0>(next_edge)] and !has_been_matched[get<1>(next_edge)]) {
+                has_been_matched[get<0>(next_edge)] = has_been_matched[get<1>(next_edge)] = true;
+                matched += 2;
+                matched_edges.emplace_back(next_edge);
+            }
         }
     }
 
