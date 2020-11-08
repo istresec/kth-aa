@@ -398,7 +398,7 @@ bool choose_y(vector<int> &tour, Grid<int> &distances, Grid<uint16_t> &knn, int 
 
 // chooses next edge to remove, part of the Lin-Kernighan algorithm implementation
 // implementation based on https://arthur.maheo.net/implementing-lin-kernighan-in-python/
-bool choose_x(vector<int> &tour, Grid<int> &distances, Grid<uint16_t> &knn, int tour_1, int last, int gain,
+bool choose_x(vector<int> &tour, Grid<int> &distances, Grid<uint16_t> &knn, int tour_1, int tour_last, int gain,
               unordered_set<pair<int, int>, pair_hash> &broken, unordered_set<pair<int, int>, pair_hash> &joined) {
     int city_2i, gain_i, relink;
     int city_1 = tour[tour_1];
@@ -407,21 +407,22 @@ bool choose_x(vector<int> &tour, Grid<int> &distances, Grid<uint16_t> &knn, int 
 
     // neighbourhood of last edge in our tour (indices in tour)
     vector<int> neighbourhood = vector<int>{};
-    neighbourhood.emplace_back((last + 1) % tour.size());
-    neighbourhood.emplace_back((last - 1 + tour.size()) % tour.size());
+    neighbourhood.emplace_back((tour_last + 1) % tour.size());
+    neighbourhood.emplace_back((tour_last - 1 + tour.size()) % tour.size());
 
     // special case for x4
     if (broken.size() == 4) {
         // give choice priority to longer edge
-        if (distances[tour[neighbourhood[1]]][last] > distances[tour[neighbourhood[0]]][last])
+        if (distances[tour[neighbourhood[1]]][tour_last] > distances[tour[neighbourhood[0]]][tour_last])
             reverse(neighbourhood.begin(), neighbourhood.end());
     }
 
     for (int tour_2i : neighbourhood) {
         city_2i = tour[tour_2i];
-        xi = create_edge_pair(tour[last], city_2i);
+        xi = create_edge_pair(tour[tour_last], city_2i);
         // gain this iteration
-        gain_i = gain + distances[last][city_2i];
+
+        gain_i = gain + distances[tour[tour_last]][city_2i];
 
         // verify that X and Y are disjoint and that xi is not already in there...
         if (joined.find(xi) != joined.end() and broken.find(xi) != broken.end()) {
