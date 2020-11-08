@@ -3,6 +3,7 @@
 #include <tuple>
 #include <algorithm>
 #include <chrono>
+#include <unordered_set>
 
 #include "TSP.h"
 //#include <blossom5-v2.05.src/PerfectMatching.h>
@@ -12,6 +13,14 @@
 
 using namespace std;
 using namespace chrono;
+
+struct pair_hash {
+public:
+    template<typename T, typename U>
+    std::size_t operator()(const std::pair<T, U> &x) const {
+        return std::hash<T>()(x.first) ^ std::hash<U>()(x.second);
+    }
+};
 
 vector<int> TSP::travel(const vector<pair<double, double>> &cities) {
     time_point<steady_clock, duration<long long int, ratio<1, 1000000000>>> deadline =
@@ -376,6 +385,172 @@ vector<int> TSP::local_3opt(vector<int> tour, Grid<int> &distances, Grid<uint16_
     } while (better and (deadline == nullptr or (*deadline > steady_clock::now())));
 
     return tour;
+}
+
+// insures that edge defined by two towns is unique (the first in the pair is always smaller)
+pair<int, int> create_edge_pair(int t1, int t2) {
+    if (t1 < t2) return pair(t1, t2);
+    return pair(t2, t1);
+}
+
+// chooses next edge to remove, part of the Lin-Kernighan algorithm implementation
+// implementation based on https://arthur.maheo.net/implementing-lin-kernighan-in-python/
+bool choose_x(vector<int> &tour, Grid<int> &distances, Grid<uint16_t> &knn, int t1_idx, int last, int gain,
+              unordered_set<pair<int, int>, pair_hash> &broken, unordered_set<pair<int, int>, pair_hash> &joined) {
+
+
+    int t2i, gain_i, relink;
+    int t1 = tour[t1_idx];
+    pair<int, int> xi;
+    unordered_set<pair<int, int>, pair_hash> added, removed;
+
+    // neighbourhood of last edge in our tour (indices in tour)
+    vector<int> neighbourhood = vector<int>{};
+    neighbourhood.emplace_back((last + 1) % tour.size());
+    neighbourhood.emplace_back((last - 1 + tour.size()) % tour.size());
+
+    // special case for x4
+    if (broken.size() == 4) {
+        // give choice priority to longer edge
+        if (distances[tour[neighbourhood[1]]][last] > distances[tour[neighbourhood[0]]][last])
+            reverse(neighbourhood.begin(), neighbourhood.end());
+    }
+
+    for (int _2i : neighbourhood) {
+        t2i = tour[_2i];
+        xi = create_edge_pair(tour[last], t2i);
+        // gain this iteration
+        gain_i = gain + distances[last][t2i];
+
+        // verify that X and Y are disjoint and that xi is not already in there... (?)
+        if (joined.count(xi) == 0 and broken.count(xi) == 0) {
+            // TODO: check if added and removed are actually copies of joined and broken, it needs to be for this impl. to work
+            added = joined;
+            removed = broken;
+            added.emplace(create_edge_pair(t2i, t1));
+            removed.emplace(xi);
+
+            relink = gain_i - distances[t2i][t1];
+
+            // TODO: generate tour...
+            auto is_tour = true;
+
+            // the current solution is not a valid tour
+            if (not is_tour and added.size() > 2) continue;
+
+            // TODO: check if tour already found, if yes just ignore it
+
+            // TODO: unfinished
+        }
+    }
+
+    return false;
+}
+
+// chooses next edge to add, part of the Lin-Kernighan algorithm implementation
+// implementation based on https://arthur.maheo.net/implementing-lin-kernighan-in-python/
+bool choose_y(vector<int> &tour, Grid<int> &distances, Grid<uint16_t> &knn, int t1_idx, int t2i_idx, int gain,
+              unordered_set<pair<int, int>, pair_hash> &broken, unordered_set<pair<int, int>, pair_hash> &joined) {
+
+    int gain_i;
+    int t1 = tour[t1_idx];
+    int t2i = tour[t2i_idx];
+    int t2i_plus_1;
+    unordered_set<pair<int, int>, pair_hash> added;
+    pair<int, int> yi;
+
+    // original heuristic: check only 5 closest neighbours when doing y2, otherwise just 1
+    int top;
+    if (broken.size() == 2) top = 5;
+    else top = 1;
+
+    unsigned i = 0;
+
+    // try to find an edge to add from closest neighbours
+    while (top >= 1 and i < knn.columns()) {
+        t2i_plus_1 = tour[knn[t2i][i]];
+        yi = create_edge_pair(t2i, t2i_plus_1);
+        if (joined.count(yi) != 0 or broken.count(yi) != 0) { // ignore edge if already exists
+            i = i + 1;
+            continue;
+        }
+        gain_i = gain - distances[t2i][t2i_plus_1];
+
+        // TODO: check if added is actually a copy of joined, it needs to be for this impl. to work
+        added = joined;
+        added.emplace(yi);
+
+        if (choose_x(tour, distances, knn, t1_idx, t2i_plus_1, gain_i, broken, added)) {
+            return true;
+        }
+
+        top = top - 1;
+    }
+
+    return false;
+}
+
+// main loop for the Lin-Kernighan algorithm
+// implementation based on the outline of https://arthur.maheo.net/implementing-lin-kernighan-in-python/
+bool lin_kernighan_main_loop(vector<int> &tour, Grid<int> &distances, Grid<uint16_t> &knn) {
+    // steps refer to a basic outline of the LK algorithm found on page 12 of
+    // "An Effective Implementation of the Lin-Kernighan Traveling Salesman Heuristic"
+    // by Keld Helsgaun (Roskilde University, Denmark)
+    // http://akira.ruc.dk/~keld/research/LKH/LKH-2.0/DOC/LKH_REPORT.pdf
+    // (they might be a description from the original work by Lin & Kernighan?)
+
+    int t1, t2, t3, gain;
+    pair<int, int> x1, y1;
+    unordered_set<pair<int, int>, pair_hash> set_x = unordered_set<pair<int, int>, pair_hash>(); // set of broken edges
+    unordered_set<pair<int, int>, pair_hash> set_y = unordered_set<pair<int, int>, pair_hash>(); // set of added edges
+    // step 2
+    //
+    // (the following loops basically look for a viable 2-opt solution, but then go on a bit further...
+    for (int i = 0; i < (int) tour.size(); i++) { // go through all possible towns for t1
+        t1 = tour[i];
+        // step 3
+        //
+        for (int j = i - 1; j <= i + 1; j++) { // get towns around t1 (i-1 and i+1) for t2
+            if (j == i) continue; // skip i == j
+            t2 = tour[(j + tour.size()) % tour.size()]; // the mod handles j = -1
+
+            // create edge x1 (edge between t1 and t2) and add it to set of edges X
+            x1 = create_edge_pair(t1, t2);
+            set_x.emplace(x1);
+
+            // step 4
+            //
+            for (int k = 0; k < (int) knn.columns(); k++) { // find t3 to create a second edge for 2-opt
+                t3 = knn[t2][k];
+                y1 = create_edge_pair(t2, t3);
+                gain = distances[t1][t2] - distances[t2][t3];
+
+                if (gain > 0) { // if the two edges would create a shorter tour go find more
+                    // step 6
+                    //
+                    if (choose_x(tour, distances, knn, i, k, gain, set_x, set_y)) {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+
+    // failed to find tour improvement
+    return false;
+}
+
+// implementation based on https://arthur.maheo.net/implementing-lin-kernighan-in-python/
+vector<int> TSP::lin_kernighan(vector<int> &tour, Grid<int> &distances, Grid<uint16_t> &knn,
+                               time_point<steady_clock, duration<long long int, ratio<1, 1000000000>>> *deadline) {
+
+    bool improved = true;
+    // main loop with timer
+    while ((deadline == nullptr or (*deadline > steady_clock::now())) and improved) {
+        improved = lin_kernighan_main_loop(tour, distances, knn);
+    }
+
+    return vector<int>();
 }
 
 

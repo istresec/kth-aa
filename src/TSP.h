@@ -38,6 +38,9 @@ public:
     static vector<int> local_3opt_no_knn_sequential(vector<int> tour, Grid<int> &distances, Grid<uint16_t> &knn,
                                                     time_point<steady_clock, duration<long long int, ratio<1, 1000000000>>> *deadline);
 
+    static vector<int> lin_kernighan(vector<int> &tour, Grid<int> &distances, Grid<uint16_t> &knn,
+                                     time_point<steady_clock, duration<long long int, ratio<1, 1000000000>>> *deadline);
+
     template<class T=uint16_t, class U=int>
     static vector<int> travel_christofides(Grid<U> &distances);
 };
