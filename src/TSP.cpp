@@ -420,7 +420,7 @@ bool choose_x(vector<int> &tour, Grid<int> &distances, Grid<uint16_t> &knn, int 
         t2i = tour[_2i];
         xi = create_edge_pair(tour[last], t2i);
         // gain this iteration
-        gain_i = gain + distances[last][t2i];
+        gain_i = gain + distances[tour[last]][t2i];
 
         // verify that X and Y are disjoint and that xi is not already in there... (?)
         if (joined.count(xi) == 0 and broken.count(xi) == 0) {
@@ -432,7 +432,7 @@ bool choose_x(vector<int> &tour, Grid<int> &distances, Grid<uint16_t> &knn, int 
 
             relink = gain_i - distances[t2i][t1];
 
-            // TODO: generate tour...
+            // TODO: generate tour...?
             auto is_tour = true;
 
             // the current solution is not a valid tour
@@ -528,6 +528,7 @@ bool lin_kernighan_main_loop(vector<int> &tour, Grid<int> &distances, Grid<uint1
                 if (gain > 0) { // if the two edges would create a shorter tour go find more
                     // step 6
                     //
+                    // TODO: k should be index of t3, not k!!!!!!!
                     if (choose_x(tour, distances, knn, i, k, gain, set_x, set_y)) {
                         return true;
                     }
