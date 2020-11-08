@@ -237,10 +237,10 @@ def confirm_or_die(problem, language, files, mainclass, tag):
             print('Mainclass:', mainclass)
     if tag:
         print('Tag:', tag)
-    print('Submit (y/N)?')
-    if sys.stdin.readline().upper()[:-1] != 'Y':
-        print('Cancelling')
-        sys.exit(1)
+    # print('Submit (y/N)?')
+    # if sys.stdin.readline().upper()[:-1] != 'Y':
+    #     print('Cancelling')
+    #     sys.exit(1)
 
 
 def open_submission(submit_response, cfg):
@@ -249,8 +249,9 @@ def open_submission(submit_response, cfg):
     m = re.search(r'Submission ID: (\d+)', submit_response)
     if m:
         submission_id = m.group(1)
-        print('Open in browser (y/N)?')
-        if sys.stdin.readline().upper()[:-1] == 'Y':
+        # print('Open in browser (y/N)?')
+        # if sys.stdin.readline().upper()[:-1] == 'Y':
+        if True:
             url = '%s/%s' % (submissions_url, submission_id)
             webbrowser.open(url)
 

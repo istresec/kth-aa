@@ -3,6 +3,7 @@
 *.out
 out
 logs
+tmp
 
 CMakeLists.txt.user
 CMakeCache.txt
