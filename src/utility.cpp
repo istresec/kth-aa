@@ -24,14 +24,6 @@ vector<pair<double, double>> create_n_cities(int n, int seed) {
     return cities;
 }
 
-int tour_distance(Grid<int> &distances, vector<int> tour) {
-    int distance = 0;
-    for (unsigned i = 0; i < tour.size(); i++) {
-        distance += distances[tour[i]][tour[(i + 1) % distances.rows()]];
-    }
-    return distance;
-}
-
 void log_cities(const vector<pair<double, double>> &cities, const string &path, const string &name) {
     ofstream outfile(path, ios_base::app);
     outfile << "\ncities_name=" << name << "\n";

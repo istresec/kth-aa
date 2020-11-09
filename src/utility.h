@@ -101,7 +101,14 @@ inline double squared_distance(const pair<double, double> &t1, const pair<double
     return dx * dx + dy * dy;
 }
 
-int tour_distance(Grid<int> &distances, vector<int> tour);
+template<class T=int>
+T tour_distance(Grid<T> &distances, vector<int> tour) {
+    T distance = 0;
+    for (unsigned i = 0; i < tour.size(); i++) {
+        distance += distances[tour[i]][tour[(i + 1) % distances.rows()]];
+    }
+    return distance;
+}
 
 vector<pair<double, double>> create_n_cities(int n, int seed);
 
@@ -112,11 +119,20 @@ inline Grid<T> *distance_matrix(const vector<pair<double, double>> &cities) {
     for (unsigned i = 0; i < n; i++) {
         (*matrix)[i][i] = 0;
     }
-    for (unsigned i = 0; i < n - 1; i++) {
-        for (unsigned j = i + 1; j < n; j++) {
-            (*matrix)[i][j] = (*matrix)[j][i] = round(sqrt(squared_distance(cities[i], cities[j])));
+    if (is_integral<T>::value) {
+        for (unsigned i = 0; i < n - 1; i++) {
+            for (unsigned j = i + 1; j < n; j++) {
+                (*matrix)[i][j] = (*matrix)[j][i] = round(sqrt(squared_distance(cities[i], cities[j])));
+            }
+        }
+    } else {
+        for (unsigned i = 0; i < n - 1; i++) {
+            for (unsigned j = i + 1; j < n; j++) {
+                (*matrix)[i][j] = (*matrix)[j][i] = sqrt(squared_distance(cities[i], cities[j]));
+            }
         }
     }
+
     return matrix;
 }
 

@@ -22,7 +22,7 @@ int main(int, char **) {
         cities.emplace_back(x, y);
     }
 
-    tour = TSP::travel(cities);
+    tour = travel(cities);
     for (int i = 0; i < n; i++) {
         printf("%d\n", tour[i]);
     }
