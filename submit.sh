@@ -15,8 +15,8 @@ python2 minifier.py "src/TSP.h" > "tmp/TSP.h"
 python2 minifier.py "src/utility.h" > "tmp/utility.h"
 # cp "src/utility.h" "tmp/utility.h"
 
-python2 minifier.py "src/utility.cpp" > "tmp/utility.cpp"
+# python2 minifier.py "src/utility.cpp" > "tmp/utility.cpp"
 # cp "src/utility.cpp" "tmp/utility.cpp"
 
 
-python submit.py -p tsp -l C++ tmp/main_kattis.cpp tmp/TSP.h tmp/utility.h tmp/utility.cpp tmp/blossom.h
+python submit.py -p tsp -l C++ tmp/main_kattis.cpp tmp/TSP.h tmp/utility.h tmp/blossom.h #tmp/utility.cpp 

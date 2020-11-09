@@ -163,7 +163,7 @@ inline Grid<T> *k_nearest_neighbors(Grid<U> &distances, int k) {
 
 // reverse tour segment if it makes the tour shorter given three vertices (each vertex is used for its left edge)
 template<class T, class U>
-inline int reverse_segment_3opt_seq(vector<T> *tour, int i, int j, int k, Grid<U> &distances, bool apply) {
+inline int reverse_segment_3opt_seq(vector<T> *tour, int i, int j, int k, Grid<U> &distances, bool) {
     int a = (*tour)[(i - 1 + tour->size()) % tour->size()];
     int b = (*tour)[i];
     int c = (*tour)[j - 1];
@@ -174,139 +174,126 @@ inline int reverse_segment_3opt_seq(vector<T> *tour, int i, int j, int k, Grid<U
     // original distance
     int d0 = distances[a][b] + distances[c][d] + distances[e][f];
 
+
     int d1 = distances[a][c] + distances[b][d] + distances[e][f];
     if (d0 > d1) {
-        if (apply) {
-            reverse(tour->begin() + i, tour->begin() + j);
-        }
+        reverse(tour->begin() + i, tour->begin() + j);
         return d0 - d1;
     }
 
     int d2 = distances[a][b] + distances[c][e] + distances[d][f];
     if (d0 > d2) {
-        if (apply) {
-            reverse(tour->begin() + j, tour->begin() + k);
-        }
+        reverse(tour->begin() + j, tour->begin() + k);
         return d0 - d2;
     }
 
     int d4 = distances[f][b] + distances[c][d] + distances[e][a];
     if (d0 > d4) {
-        if (apply) {
-            reverse(tour->begin() + i, tour->begin() + k);
-        }
+        reverse(tour->begin() + i, tour->begin() + k);
         return d0 - d2;
     }
 
     int d3 = distances[a][d] + distances[e][b] + distances[c][f];
     if (d0 > d3) {
-        if (apply) {
-            vector<int> temp_tour = vector<int>{};
-            temp_tour.insert(temp_tour.end(), tour->begin() + j, tour->begin() + k);
-            temp_tour.insert(temp_tour.end(), tour->begin() + i, tour->begin() + j);
-            copy_n(temp_tour.begin(), temp_tour.size(), &(*tour)[i]);
-        }
+        vector<int> temp_tour = vector<int>{};
+        temp_tour.insert(temp_tour.end(), tour->begin() + j, tour->begin() + k);
+        temp_tour.insert(temp_tour.end(), tour->begin() + i, tour->begin() + j);
+        copy_n(temp_tour.begin(), temp_tour.size(), &(*tour)[i]);
         return d0 - d3;
     }
 
     int d5 = distances[a][e] + distances[d][b] + distances[c][f];
     if (d0 > d5) {
-        if (apply) {
-            // get ac bd ef like in d1
-            reverse(tour->begin() + i, tour->begin() + j);
-            // get ae db cf
-            reverse(tour->begin() + i, tour->begin() + k);
-        }
+        // get ac bd ef like in d1
+        reverse(tour->begin() + i, tour->begin() + j);
+        // get ae db cf
+        reverse(tour->begin() + i, tour->begin() + k);
         return d0 - d5;
     }
 
     int d6 = distances[a][c] + distances[b][e] + distances[d][f];
     if (d0 > d6) {
-        if (apply) {
-            // get ac bd ef like with d1
-            reverse(tour->begin() + i, tour->begin() + j);
-            // now reverse from d to e
-            reverse(tour->begin() + j, tour->begin() + k);
-        }
+        // get ac bd ef like with d1
+        reverse(tour->begin() + i, tour->begin() + j);
+        // now reverse from d to e
+        reverse(tour->begin() + j, tour->begin() + k);
         return d0 - d6;
     }
 
     int d7 = distances[a][d] + distances[e][c] + distances[b][f];
     if (d0 > d7) {
-        if (apply) {
-            // get ab ce df like with d2
-            reverse(tour->begin() + j, tour->begin() + k);
-            // now reverse from d to b
-            reverse(tour->begin() + i, tour->begin() + k);
-        }
+        // get ab ce df like with d2
+        reverse(tour->begin() + j, tour->begin() + k);
+        // now reverse from d to b
+        reverse(tour->begin() + i, tour->begin() + k);
         return d0 - d7;
     }
 
     return 0;
 }
 
-template<class T, class U>
-inline int reverse_segment_3opt(vector<T> *tour, int i, int j, int k, Grid<U> &distances, bool apply) {
-    if (i < 0 or i >= j - 1 or j >= k - 1 or k > tour->size()) { // TODO remove
-        throw logic_error("Inconsistent state! Me no likey.");
-    }
-
-    int a = (*tour)[(i - 1 + tour->size()) % tour->size()];
-    int b = (*tour)[i];
-    int c = (*tour)[j - 1];
-    int d = (*tour)[j];
-    int e = (*tour)[k - 1];
-    int f = (*tour)[k % (*tour).size()];
-
-    // original distance
-    int d0 = distances[a][b] + distances[c][d] + distances[e][f];
-    int d1 = distances[a][c] + distances[b][d] + distances[e][f];
-    int d2 = distances[a][b] + distances[c][e] + distances[d][f];
-    int d3 = distances[a][d] + distances[e][b] + distances[c][f];
-    int d4 = distances[f][b] + distances[c][d] + distances[e][a];
-    int d5 = distances[a][e] + distances[d][b] + distances[c][f];
-    int d6 = distances[a][c] + distances[b][e] + distances[d][f];
-    int d7 = distances[a][d] + distances[e][c] + distances[b][f];
-
-    int best = min(min(min(min(min(min(d1, d2), d3), d4), d5), d6), d7);
-
-    if (best >= d0) return 0;
-    if (not apply) return d0 - best;
-
-    if (best == d1) {
-        reverse(tour->begin() + i, tour->begin() + j);
-    } else if (best == d2) {
-        reverse(tour->begin() + j, tour->begin() + k);
-        reverse(tour->begin() + j, tour->begin() + k);
-    } else if (best == d3) {
-        vector<int> temp_tour = vector<int>{};
-        temp_tour.insert(temp_tour.end(), tour->begin() + j, tour->begin() + k);
-        temp_tour.insert(temp_tour.end(), tour->begin() + i, tour->begin() + j);
-        copy_n(temp_tour.begin(), temp_tour.size(), &(*tour)[i]);
-    } else if (best == d4) {
-        reverse(tour->begin() + i, tour->begin() + k);
-    } else if (best == d5) {
-        // get ac bd ef like in d1
-        reverse(tour->begin() + i, tour->begin() + j);
-        // get ae db cf
-        reverse(tour->begin() + i, tour->begin() + k);
-    } else if (best == d6) {
-        // get ac bd ef like with d1
-        reverse(tour->begin() + i, tour->begin() + j);
-        // now reverse from d to e
-        reverse(tour->begin() + j, tour->begin() + k);
-    } else if (best == d7) {
-        // get ab ce df like with d2
-        reverse(tour->begin() + j, tour->begin() + k);
-        // now reverse from d to b
-        reverse(tour->begin() + i, tour->begin() + k);
-    } else {
-        throw runtime_error("inconsistent state");
-    }
-
-
-    return d0 - best;
-}
+//template<class T, class U>
+//inline int reverse_segment_3opt(vector<T> *tour, int i, int j, int k, Grid<U> &distances, bool apply) {
+//    if (i < 0 or i >= j - 1 or j >= k - 1 or k > tour->size()) { // TODO remove
+//        throw logic_error("Inconsistent state! Me no likey.");
+//    }
+//
+//    int a = (*tour)[(i - 1 + tour->size()) % tour->size()];
+//    int b = (*tour)[i];
+//    int c = (*tour)[j - 1];
+//    int d = (*tour)[j];
+//    int e = (*tour)[k - 1];
+//    int f = (*tour)[k % (*tour).size()];
+//
+//    // original distance
+//    int d0 = distances[a][b] + distances[c][d] + distances[e][f];
+//    int d1 = distances[a][c] + distances[b][d] + distances[e][f];
+//    int d2 = distances[a][b] + distances[c][e] + distances[d][f];
+//    int d3 = distances[a][d] + distances[e][b] + distances[c][f];
+//    int d4 = distances[f][b] + distances[c][d] + distances[e][a];
+//    int d5 = distances[a][e] + distances[d][b] + distances[c][f];
+//    int d6 = distances[a][c] + distances[b][e] + distances[d][f];
+//    int d7 = distances[a][d] + distances[e][c] + distances[b][f];
+//
+//    int best = min(min(min(min(min(min(d1, d2), d3), d4), d5), d6), d7);
+//
+//    if (best >= d0) return 0;
+//    if (not apply) return d0 - best;
+//
+//    if (best == d1) {
+//        reverse(tour->begin() + i, tour->begin() + j);
+//    } else if (best == d2) {
+//        reverse(tour->begin() + j, tour->begin() + k);
+//        reverse(tour->begin() + j, tour->begin() + k);
+//    } else if (best == d3) {
+//        vector<int> temp_tour = vector<int>{};
+//        temp_tour.insert(temp_tour.end(), tour->begin() + j, tour->begin() + k);
+//        temp_tour.insert(temp_tour.end(), tour->begin() + i, tour->begin() + j);
+//        copy_n(temp_tour.begin(), temp_tour.size(), &(*tour)[i]);
+//    } else if (best == d4) {
+//        reverse(tour->begin() + i, tour->begin() + k);
+//    } else if (best == d5) {
+//        // get ac bd ef like in d1
+//        reverse(tour->begin() + i, tour->begin() + j);
+//        // get ae db cf
+//        reverse(tour->begin() + i, tour->begin() + k);
+//    } else if (best == d6) {
+//        // get ac bd ef like with d1
+//        reverse(tour->begin() + i, tour->begin() + j);
+//        // now reverse from d to e
+//        reverse(tour->begin() + j, tour->begin() + k);
+//    } else if (best == d7) {
+//        // get ab ce df like with d2
+//        reverse(tour->begin() + j, tour->begin() + k);
+//        // now reverse from d to b
+//        reverse(tour->begin() + i, tour->begin() + k);
+//    } else {
+//        throw runtime_error("inconsistent state");
+//    }
+//
+//
+//    return d0 - best;
+//}
 
 void log_cities(const vector<pair<double, double>> &cities, const string &path, const string &name);
 
