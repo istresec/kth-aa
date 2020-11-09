@@ -193,6 +193,39 @@ inline int reverse_segment_3opt_seq(vector<T> *tour, int i, int j, int k, Grid<U
         return d0 - d3;
     }
 
+    int d5 = distances[a][e] + distances[d][b] + distances[c][f];
+    if (d0 > d5) {
+        if (apply) {
+            // get ac bd ef like in d1
+            reverse(tour->begin() + i, tour->begin() + j);
+            // get ae db cf
+            reverse(tour->begin() + i, tour->begin() + k);
+        }
+        return d0 - d3;
+    }
+
+    int d6 = distances[a][c] + distances[b][e] + distances[d][f];
+    if (d0 > d6) {
+        if (apply) {
+            // get ac bd ef like with d1
+            reverse(tour->begin() + i, tour->begin() + j);
+            // now reverse from d to e
+            reverse(tour->begin() + j, tour->begin() + k);
+        }
+        return d0 - d3;
+    }
+
+    int d7 = distances[a][d] + distances[e][c] + distances[b][f];
+    if (d0 > d7) {
+        if (apply) {
+            // get ab ce df like with d2
+            reverse(tour->begin() + j, tour->begin() + k);
+            // now reverse from d to b
+            reverse(tour->begin() + i, tour->begin() + k);
+        }
+        return d0 - d3;
+    }
+
     return 0;
 }
 

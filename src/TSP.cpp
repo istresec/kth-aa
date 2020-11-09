@@ -29,7 +29,7 @@ vector<int> TSP::travel(const vector<pair<double, double>> &cities) {
     vector<int> tour;
     if (cities.size() <= 2) {
         tour = vector<int>();
-        for (unsigned i = 0; i < cities.size(); i++) tour.emplace_back();
+        for (unsigned i = 0; i < cities.size(); i++) tour.emplace_back(i);
     } else if (cities.size() <= 13) {
         tour = travel_bruteforce(cities, *distances);
     } else {

@@ -1055,7 +1055,7 @@ inline typename PriorityQueue<REAL>::Item *PriorityQueue<REAL>::GetNext(Item *i)
 #include <time.h>
 inline double get_time() {
     struct timespec t;
-    clock_gettime(CLOCK_PROCESS_CPUTIME_ID, &t);
+    clock_gettime(CLOCK_REALTIME, &t);
     return (double) t.tv_nsec * 1.00E-9 + (double) t.tv_sec;
 }
 #endif

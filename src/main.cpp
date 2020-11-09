@@ -193,17 +193,17 @@ int main(int, char **) {
 
     int n = 1000;
     vector<int> tour;
-//    auto cities = create_n_cities(n, 720);
+    auto cities = create_n_cities(n, 720);
     VariadicTable<string, int, double> vt({"Algo", "Distance", "Time elapsed"});
 
-    cin >> n;
-    vector<pair<double, double>> cities;
-    for (int i = 0; i < n; i++) {
-        double x, y;
+//    cin >> n;
+//    vector<pair<double, double>> cities;
+//    for (int i = 0; i < n; i++) {
+//        double x, y;
 //        scanf(" %lf %lf", &x, &y);
-        cin >> x >> y;
-        cities.emplace_back(x, y);
-    }
+//        cin >> x >> y;
+//        cities.emplace_back(x, y);
+//    }
 
     // logging
     if (DEBUG) {
@@ -243,6 +243,7 @@ int main(int, char **) {
     demo_cw_opt("CW 3opt-150", cities, vt, true, 150, TSP::travel_cw, TSP::local_3opt);
 //    demo_cw_opt("CW 3opt-200", cities, vt, true, 200, TSP::travel_cw, TSP::local_3opt);
 //    demo_cw_opt("CW 3opt no knn", cities, vt, true, 20, TSP::travel_cw, TSP::local_3opt_no_knn);
+    demo_cw_opt("CW 3opt 150 knn sequential NO DEAD", cities, vt, false, 150, TSP::travel_cw, TSP::local_3opt_no_knn_sequential);
     demo_cw_opt("CW 3opt 150 knn sequential", cities, vt, true, 150, TSP::travel_cw, TSP::local_3opt_no_knn_sequential);
     demo_cw_opt("CW 2opt-150 + 3opt-150", cities, vt, true, 150, TSP::travel_cw,
                 TSP::local_2opt, TSP::local_3opt);
