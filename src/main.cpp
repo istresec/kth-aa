@@ -45,7 +45,8 @@ void measure_preprocessing_time(vector<pair<double, double>> &cities, VariadicTa
 }
 
 void demo_christofides(const string &alg_name, vector<pair<double, double>> &cities,
-                       VariadicTable<string, int, double> &vt, bool use2opt = false, bool use3opt = false, int k = 80) {
+                       VariadicTable<string, int, double> &vt, int k = 80, bool use2opt = false, bool use3opt = false,
+                       bool use_lin_kernighan = false) {
     if (DEBUG) {
         cout << alg_name << ": ";
     }
@@ -64,7 +65,7 @@ void demo_christofides(const string &alg_name, vector<pair<double, double>> &cit
     }
 
     Grid<uint16_t> *knn;
-    if (use2opt or use3opt) {
+    if (use2opt or use3opt or use_lin_kernighan) {
         knn = k_nearest_neighbors<uint16_t>(*distances, k);
         if (use2opt) {
             tour = TSP::local_2opt(tour, *distances, *knn, &deadline);
@@ -79,6 +80,13 @@ void demo_christofides(const string &alg_name, vector<pair<double, double>> &cit
             if (LOG) {
                 int distance = tour_distance(*distances, tour);
                 log_tour(tour, LOG_PATH, " 2 --> 3opt " + to_string(distance));
+            }
+        }
+        if (use_lin_kernighan) {
+            tour = TSP::lin_kernighan(tour, *distances, *knn, &deadline);
+            if (LOG) {
+                int distance = tour_distance(*distances, tour);
+                log_tour(tour, LOG_PATH, " 3 --> CHOKOLINO " + to_string(distance));
             }
         }
     }
@@ -219,11 +227,12 @@ int main(int, char **) {
 //    demo_cw_opt("Naive 3opt", cities, vt, true, 20, TSP::travel_naive, TSP::local_3opt);
 //    vt.print(cout);
 
-    demo_christofides("Christofides", cities, vt, false, false, 150);
-    demo_christofides("Christofides 2opt-150", cities, vt, true, false, 150);
-    demo_christofides("Christofides 2opt-150 3opt_no_knn_sequential", cities, vt, true, true, 150);
-    demo_christofides("Christofides 3opt-150_no_knn_sequential", cities, vt, false, true, 150);
-//    demo_cw_alg("CW", cities, vt, TSP::travel_cw);
+    demo_christofides("Christofides", cities, vt, 150,false, false);
+    demo_christofides("Christofides 2opt-150", cities, vt, 150,true, false);
+    demo_christofides("Christofides 2opt-150 3opt_no_knn_sequential", cities, vt, 150,true, true);
+    demo_christofides("Christofides 3opt-150_no_knn_sequential", cities, vt, 150,false, true);
+    demo_christofides("Christofides chokolino-150", cities, vt, 150,false, false, true);
+    demo_cw_alg("CW", cities, vt, TSP::travel_cw);
 //    demo_cw_opt("CW 2opt-20", cities, vt, true, 20, TSP::travel_cw, TSP::local_2opt);
 //    demo_cw_opt("CW 2opt-80", cities, vt, true, 80, TSP::travel_cw, TSP::local_2opt);
     demo_cw_opt("CW 2opt-150", cities, vt, true, 150, TSP::travel_cw, TSP::local_2opt);

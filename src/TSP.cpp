@@ -192,7 +192,7 @@ vector<int> TSP::local_2opt(vector<int> tour_vector, Grid<int> &distances, Grid<
     uint16_t n = tour_vector.size();
     auto tour = Grid<uint16_t>(n, 2);
     for (int i = 0; i < n; i++) {
-        tour[tour_vector[i]][0] = tour_vector[i == 0 ? i - 1 + n : i - 1];
+        tour[tour_vector[i]][0] = tour_vector[i == 0 ? i + n - 1 : i - 1];
         tour[tour_vector[i]][1] = tour_vector[i == n - 1 ? i + 1 - n : i + 1];
     }
 
@@ -345,11 +345,11 @@ vector<int> TSP::local_3opt(vector<int> tour, Grid<int> &distances, Grid<uint16_
         for (int i = 0; i < n; i++) {
             if (deadline != nullptr and not(*deadline > steady_clock::now()))
                 break;
-            for (int j_knn = 0; j_knn < knn.columns() - 1; j_knn++) {
+            for (int j_knn = 0; j_knn < (int) knn.columns() - 1; j_knn++) {
                 int j = city_to_tour_idx[knn[i][j_knn]];
                 if (i >= j - 1) continue;
 
-                for (int k_knn = j_knn + 1; k_knn < knn.columns(); k_knn++) {
+                for (int k_knn = j_knn + 1; k_knn < (int) knn.columns(); k_knn++) {
                     int k = city_to_tour_idx[knn[i][k_knn]];
                     if (j >= k - 1) continue;
 
@@ -393,17 +393,100 @@ pair<int, int> create_edge_pair(int t1, int t2) {
     return pair(t2, t1);
 }
 
-bool choose_y(vector<int> &tour, Grid<int> &distances, Grid<uint16_t> &knn, int tour_1, int tour_2i, int gain,
+bool choose_y(vector<int> &tour, unordered_set<pair<int, int>, pair_hash> &tour_edges, vector<int> city_to_tour_idx,
+              Grid<int> &distances, Grid<uint16_t> &knn, int tour_1, int tour_2i, int gain,
               unordered_set<pair<int, int>, pair_hash> &broken, unordered_set<pair<int, int>, pair_hash> &joined);
+
+inline unordered_set<pair<int, int>, pair_hash> _get_tour_edges(const vector<int> &tour) {
+    unordered_set<pair<int, int>, pair_hash> tour_edges;
+    tour_edges.reserve(tour.size());
+    for (unsigned i = 0; i < tour.size(); i++) {
+        tour_edges.emplace(create_edge_pair(tour[i], tour[(i + 1) % tour.size()]));
+    }
+    return tour_edges;
+}
+
+inline vector<int> _create_city_to_tour_idx(const vector<int> &tour) {
+    vector<int> city_to_tour_idx(tour.size());
+    city_to_tour_idx.reserve(tour.size());
+    for (int tour_idx = 0; tour_idx < (int) tour.size(); tour_idx++) {
+        city_to_tour_idx[tour[tour_idx]] = tour_idx;
+    }
+    return city_to_tour_idx;
+}
+
+
+inline bool _generate_tour(const vector<int> &tour,
+                           const unordered_set<pair<int, int>, pair_hash> &added,
+                           const unordered_set<pair<int, int>, pair_hash> &removed,
+                           vector<int> &new_tour) {
+    bool is_tour = true;
+    int n = tour.size();
+    auto city_to_neighbors = Grid<int>(n, 2); // city --> [pred, successor] initially
+    for (int i = 0; i < n; i++) {
+        city_to_neighbors[tour[i]][0] = tour[i == 0 ? i + n - 1 : i - 1];
+        city_to_neighbors[tour[i]][1] = tour[i == n - 1 ? i + 1 - n : i + 1];
+    }
+
+    for (auto edge_to_remove: removed) {
+        if (city_to_neighbors[edge_to_remove.first][0] == edge_to_remove.second) {
+            city_to_neighbors[edge_to_remove.first][0] = -1;
+            city_to_neighbors[edge_to_remove.second][1] = -1;
+        } else {
+            city_to_neighbors[edge_to_remove.first][1] = -1;
+            city_to_neighbors[edge_to_remove.second][0] = -1;
+        }
+    }
+
+    for (auto edge_to_add: added) {
+        if (city_to_neighbors[edge_to_add.first][0] == -1) {
+            city_to_neighbors[edge_to_add.first][0] = edge_to_add.second;
+        } else {
+            if (city_to_neighbors[edge_to_add.first][1] != -1) { // TODO if remove when sure that it works
+                throw logic_error("Inconsistent state in tour generation");
+            }
+            city_to_neighbors[edge_to_add.first][1] = edge_to_add.second;
+        }
+        if (city_to_neighbors[edge_to_add.second][0] == -1) {
+            city_to_neighbors[edge_to_add.second][0] = edge_to_add.first;
+        } else {
+            if (city_to_neighbors[edge_to_add.second][1] != -1) { // TODO if remove when sure that it works
+                throw logic_error("Inconsistent state in tour generation");
+            }
+            city_to_neighbors[edge_to_add.second][1] = edge_to_add.first;
+        }
+    }
+
+    new_tour.reserve(n);
+    unordered_set<int> visited_cities;
+    visited_cities.reserve(n);
+    int next_city = 0;
+    new_tour.emplace_back(next_city);
+    for (int i = 0; i < n; i++) {
+        visited_cities.emplace(next_city);
+        auto left = city_to_neighbors[next_city][0];
+        auto right = city_to_neighbors[next_city][1];
+        if (visited_cities.find(left) == visited_cities.end()) {
+            next_city = left;
+            new_tour.emplace_back(next_city);
+        } else if (visited_cities.find(right) == visited_cities.end()) {
+            // **Nemoj ici lijevo na krizanju staze**
+            next_city = right;
+            new_tour.emplace_back(next_city);
+        } else {
+            // unexpected cycle detected. tour not valid
+            is_tour = false;
+            break;
+        }
+    }
+    return is_tour;
+}
 
 // chooses next edge to remove, part of the Lin-Kernighan algorithm implementation
 // implementation based on https://arthur.maheo.net/implementing-lin-kernighan-in-python/
-bool choose_x(vector<int> &tour, Grid<int> &distances, Grid<uint16_t> &knn, int tour_1, int tour_last, int gain,
+bool choose_x(vector<int> &tour, unordered_set<pair<int, int>, pair_hash> &tour_edges, vector<int> &city_to_tour_idx,
+              Grid<int> &distances, Grid<uint16_t> &knn, int tour_1, int tour_last, int gain,
               unordered_set<pair<int, int>, pair_hash> &broken, unordered_set<pair<int, int>, pair_hash> &joined) {
-    int city_2i, gain_i, relink;
-    int city_1 = tour[tour_1];
-    pair<int, int> xi;
-    unordered_set<pair<int, int>, pair_hash> added, removed;
 
     // neighbourhood of last edge in our tour (indices in tour)
     vector<int> neighbourhood = vector<int>{};
@@ -417,46 +500,38 @@ bool choose_x(vector<int> &tour, Grid<int> &distances, Grid<uint16_t> &knn, int 
             reverse(neighbourhood.begin(), neighbourhood.end());
     }
 
+    int city_1 = tour[tour_1];
     for (int tour_2i : neighbourhood) {
-        city_2i = tour[tour_2i];
-        xi = create_edge_pair(tour[tour_last], city_2i);
+        int city_2i = tour[tour_2i];
+        auto xi = create_edge_pair(tour[tour_last], city_2i);
         // gain this iteration
 
-        gain_i = gain + distances[tour[tour_last]][city_2i];
+        int gain_i = gain + distances[tour[tour_last]][city_2i];
 
         // verify that X and Y are disjoint and that xi is not already in there...
-        if (joined.find(xi) != joined.end() and broken.find(xi) != broken.end()) {
-            added = joined;
-            removed = broken;
+        if (joined.find(xi) == joined.end() and broken.find(xi) == broken.end()) {
+            auto added = joined;
+            auto removed = broken;
             added.emplace(create_edge_pair(city_2i, city_1)); // tour relinking
             removed.emplace(xi);
 
-            relink = gain_i - distances[city_2i][city_1];
+            int relink = gain_i - distances[city_2i][city_1];
 
-            // TODO: generate tour from (tour - removed + added)
-            auto is_tour = true;
+            vector<int> new_tour;
+            auto is_tour = _generate_tour(tour, added, removed, new_tour);
 
             // the current solution is not a valid tour
             if (not is_tour and added.size() > 2) continue;
 
-            // TODO: check if tour already found, if yes just ignore it
-            // TODO: hwy is this^ check needed?
-
-            // TODO: save the current solution if it is better
             if (is_tour and relink > 0) {
-                //TODO
-                // save new (best) cost
-                // set new (best) tour
+                tour = new_tour;
+                tour_edges = _get_tour_edges(tour);
+                city_to_tour_idx = _create_city_to_tour_idx(tour);
                 return true;
             } else {
-                auto choice = choose_y(tour, distances, knn, tour_1, tour_2i, gain_i, removed, joined);
-                if (broken.size() == 2 and choice) { // TODO hwy
-                    return true;
-                } else {
-                    return choice;
-                }
+                return choose_y(tour, tour_edges, city_to_tour_idx, distances, knn, tour_1, tour_2i, gain_i, removed,
+                                joined);
             }
-
         }
     }
 
@@ -465,7 +540,8 @@ bool choose_x(vector<int> &tour, Grid<int> &distances, Grid<uint16_t> &knn, int 
 
 // chooses next edge to add, part of the Lin-Kernighan algorithm implementation
 // implementation based on https://arthur.maheo.net/implementing-lin-kernighan-in-python/
-bool choose_y(vector<int> &tour, Grid<int> &distances, Grid<uint16_t> &knn, int tour_1, int tour_2i, int gain,
+bool choose_y(vector<int> &tour, unordered_set<pair<int, int>, pair_hash> &tour_edges, vector<int> city_to_tour_idx,
+              Grid<int> &distances, Grid<uint16_t> &knn, int tour_1, int tour_2i, int gain,
               unordered_set<pair<int, int>, pair_hash> &broken, unordered_set<pair<int, int>, pair_hash> &joined) {
 
     int gain_i;
@@ -478,23 +554,34 @@ bool choose_y(vector<int> &tour, Grid<int> &distances, Grid<uint16_t> &knn, int 
     // original heuristic: check only 5 closest neighbours when doing y2, otherwise just 1
     int top = broken.size() == 2 ? 5 : top = 1;
 
-    unsigned i = 0;
 
     // try to find an edge to add from closest neighbours
-    while (top-- >= 1 and i < knn.columns()) {
+    for (unsigned i = 0; i < knn.columns() and top >= 1; i++) {
         city_2i_plus_1 = knn[city_2i][i];
         yi = create_edge_pair(city_2i, city_2i_plus_1);
 
-        if (joined.find(yi) != joined.end() and broken.find(yi) != broken.end()) {
-            i++; // TODO is this check needed? Don't see it in pseudocode..
+        // Three checks need to be done
+        // 1. Gain still positive
+        gain_i = gain - distances[city_2i][city_2i_plus_1];
+        if (gain_i <= 0) {
+            continue;
+        }
+        // 2. yi not already removed or added to tour
+        if (joined.find(yi) != joined.end() or broken.find(yi) != broken.end()) {
+            continue;
+        }
+        // 3. yi is not in tour_edges
+        if (tour_edges.find(yi) != tour_edges.end()) {
             continue;
         }
 
+        top--;
         added = joined;
         added.emplace(yi);
-        gain_i = gain - distances[city_2i][city_2i_plus_1];
-
-        return choose_x(tour, distances, knn, tour_1, city_2i_plus_1, gain_i, broken, added);
+        if (choose_x(tour, tour_edges, city_to_tour_idx, distances, knn, tour_1, city_to_tour_idx[city_2i_plus_1],
+                     gain_i, broken, added)) {
+            return true;
+        }
     }
 
     return false;
@@ -502,59 +589,61 @@ bool choose_y(vector<int> &tour, Grid<int> &distances, Grid<uint16_t> &knn, int 
 
 // main loop for the Lin-Kernighan algorithm
 // implementation based on the outline of https://arthur.maheo.net/implementing-lin-kernighan-in-python/
-bool lin_kernighan_main_loop(vector<int> &tour, Grid<int> &distances, Grid<uint16_t> &knn) {
+bool
+lin_kernighan_main_loop(vector<int> &tour, Grid<int> &distances, Grid<uint16_t> &knn) {
     // steps refer to a basic outline of the LK algorithm found on page 12 of
     // "An Effective Implementation of the Lin-Kernighan Traveling Salesman Heuristic"
     // by Keld Helsgaun (Roskilde University, Denmark)
     // http://akira.ruc.dk/~keld/research/LKH/LKH-2.0/DOC/LKH_REPORT.pdf
     // (they might be a description from the original work by Lin & Kernighan?)
 
-    int city_1, city_2, city_3, gain;
-    pair<int, int> x1, y1;
     unordered_set<pair<int, int>, pair_hash> set_x = unordered_set<pair<int, int>, pair_hash>(); // set of broken edges
-    unordered_set<pair<int, int>, pair_hash> set_y = unordered_set<pair<int, int>, pair_hash>(); // set of added edges
     set_x.reserve(tour.size());
+
+    unordered_set<pair<int, int>, pair_hash> set_y = unordered_set<pair<int, int>, pair_hash>(); // set of added edges
     set_y.reserve(tour.size());
 
-    vector<int> city_to_tour_idx;
-    city_to_tour_idx.reserve(tour.size());
-    for (int tour_idx = 0; tour_idx < (int) tour.size(); tour_idx++) {
-        city_to_tour_idx[tour[tour_idx]] = tour_idx;
-    }
+    unordered_set<pair<int, int>, pair_hash> tour_edges = _get_tour_edges(tour);
+
+    auto city_to_tour_idx = _create_city_to_tour_idx(tour);
 
     // step 2
     //
     // (the following loops basically look for a viable 2-opt solution, but then go on a bit further...
     for (int tour_i = 0; tour_i < (int) tour.size(); tour_i++) { // go through all possible towns for t1
-        city_1 = tour[tour_i];
+        int city_1 = tour[tour_i];
         // step 3
         //
         for (int tour_j = tour_i - 1; tour_j <= tour_i + 1; tour_j += 2) { // get towns around t1 (i-1 and i+1) for t2
-            city_2 = tour[(tour_j + tour.size()) % tour.size()]; // the mod handles j = -1
+            int city_2 = tour[(tour_j + tour.size()) % tour.size()]; // the mod handles j = -1
 
             // create edge x1 (edge between t1 and t2) and add it to set of edges X
-            x1 = create_edge_pair(city_1, city_2);
+            auto x1 = create_edge_pair(city_1, city_2);
+            set_x.clear();
             set_x.emplace(x1);
 
             // step 4
             //
             // find t3 to create a second edge for 2-opt
             for (int neighbor_idx = 0; neighbor_idx < (int) knn.columns(); neighbor_idx++) {
-                // TODO fix knn
+                // TODO consider using some better metric than knn
                 // TODO should we rather than knn or best neighbor look at neighbors sorted by 1-tree score (not closest distance)
-                city_3 = knn[city_2][neighbor_idx];
+                auto city_3 = knn[city_2][neighbor_idx];
                 if (city_to_tour_idx[city_3] >= (tour_i - 1) % (int) tour.size() and
                     city_to_tour_idx[city_3] <= (tour_i + 1) % (int) tour.size()) {
                     continue; // skip city3 if around city1 in tour
                 }
-                y1 = create_edge_pair(city_2, city_3);
-                gain = distances[city_1][city_2] - distances[city_2][city_3];
+                auto y1 = create_edge_pair(city_2, city_3);
+                int gain = distances[city_1][city_2] - distances[city_2][city_3];
 
                 if (gain > 0) { // if the two edges would create a shorter tour go find more
                     // step 6
                     //
-                    int tour_k = city_to_tour_idx[neighbor_idx];
-                    if (choose_x(tour, distances, knn, tour_i, tour_k, gain, set_x, set_y)) {
+                    int tour_k = city_to_tour_idx[city_3];
+                    set_y.clear();
+                    set_y.emplace(y1);
+                    if (choose_x(tour, tour_edges, city_to_tour_idx, distances, knn, tour_i, tour_k, gain, set_x,
+                                 set_y)) {
                         return true;
                     }
                 }
@@ -569,21 +658,18 @@ bool lin_kernighan_main_loop(vector<int> &tour, Grid<int> &distances, Grid<uint1
 // implementation based on https://arthur.maheo.net/implementing-lin-kernighan-in-python/
 vector<int> TSP::lin_kernighan(vector<int> &tour, Grid<int> &distances, Grid<uint16_t> &knn,
                                time_point<steady_clock, duration<long long int, ratio<1, 1000000000>>> *deadline) {
-
     bool improved = true;
-    // main loop with timer
-    while ((deadline == nullptr or (*deadline > steady_clock::now())) and improved) {
+    while ((deadline == nullptr or (*deadline < steady_clock::now())) and improved) {
         improved = lin_kernighan_main_loop(tour, distances, knn);
-        // TODO should intermediate tours be saved somewhere?
+        
     }
-
-    return vector<int>();
+    return tour;
 }
 
 
 template<class T, class U>
 vector<int> TSP::travel_christofides(Grid<U> &distances) {
-    int n = distances.rows();
+    unsigned n = distances.rows();
 
     // *** Kruskal's algo ***
 
@@ -632,7 +718,7 @@ vector<int> TSP::travel_christofides(Grid<U> &distances) {
     // O(n)
     auto unmatched = vector<int>();
     unmatched.reserve(n);
-    for (int i = 0; i < n; i++) {
+    for (unsigned i = 0; i < n; i++) {
         if (city_mst_degree[i] % 2) unmatched.emplace_back(i);
     }
     if (unmatched.size() % 2) {
