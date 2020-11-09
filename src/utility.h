@@ -201,7 +201,7 @@ inline int reverse_segment_3opt_seq(vector<T> *tour, int i, int j, int k, Grid<U
             // get ae db cf
             reverse(tour->begin() + i, tour->begin() + k);
         }
-        return d0 - d3;
+        return d0 - d5;
     }
 
     int d6 = distances[a][c] + distances[b][e] + distances[d][f];
@@ -212,7 +212,7 @@ inline int reverse_segment_3opt_seq(vector<T> *tour, int i, int j, int k, Grid<U
             // now reverse from d to e
             reverse(tour->begin() + j, tour->begin() + k);
         }
-        return d0 - d3;
+        return d0 - d6;
     }
 
     int d7 = distances[a][d] + distances[e][c] + distances[b][f];
@@ -223,7 +223,7 @@ inline int reverse_segment_3opt_seq(vector<T> *tour, int i, int j, int k, Grid<U
             // now reverse from d to b
             reverse(tour->begin() + i, tour->begin() + k);
         }
-        return d0 - d3;
+        return d0 - d7;
     }
 
     return 0;
@@ -248,8 +248,11 @@ inline int reverse_segment_3opt(vector<T> *tour, int i, int j, int k, Grid<U> &d
     int d2 = distances[a][b] + distances[c][e] + distances[d][f];
     int d3 = distances[a][d] + distances[e][b] + distances[c][f];
     int d4 = distances[f][b] + distances[c][d] + distances[e][a];
+    int d5 = distances[a][e] + distances[d][b] + distances[c][f];
+    int d6 = distances[a][c] + distances[b][e] + distances[d][f];
+    int d7 = distances[a][d] + distances[e][c] + distances[b][f];
 
-    int best = min(min(min(d1, d2), d3), d4);
+    int best = min(min(min(min(min(min(d1, d2), d3), d4), d5), d6), d7);
 
     if (best >= d0) return 0;
     if (not apply) return d0 - best;
@@ -265,6 +268,21 @@ inline int reverse_segment_3opt(vector<T> *tour, int i, int j, int k, Grid<U> &d
         temp_tour.insert(temp_tour.end(), tour->begin() + i, tour->begin() + j);
         copy_n(temp_tour.begin(), temp_tour.size(), &(*tour)[i]);
     } else if (best == d4) {
+        reverse(tour->begin() + i, tour->begin() + k);
+    } else if (best == d5) {
+        // get ac bd ef like in d1
+        reverse(tour->begin() + i, tour->begin() + j);
+        // get ae db cf
+        reverse(tour->begin() + i, tour->begin() + k);
+    } else if (best == d6) {
+        // get ac bd ef like with d1
+        reverse(tour->begin() + i, tour->begin() + j);
+        // now reverse from d to e
+        reverse(tour->begin() + j, tour->begin() + k);
+    } else if (best == d7) {
+        // get ab ce df like with d2
+        reverse(tour->begin() + j, tour->begin() + k);
+        // now reverse from d to b
         reverse(tour->begin() + i, tour->begin() + k);
     } else {
         throw runtime_error("inconsistent state");
