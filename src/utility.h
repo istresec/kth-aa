@@ -101,10 +101,10 @@ inline double squared_distance(const pair<double, double> &t1, const pair<double
     return dx * dx + dy * dy;
 }
 
-template<class T=int>
-T tour_distance(Grid<T> &distances, vector<int> tour) {
-    T distance = 0;
-    for (unsigned i = 0; i < tour.size(); i++) {
+template<class T=int, class U=int>
+U tour_distance(Grid<U> &distances, vector<T> tour) {
+    U distance = 0;
+    for (T i = 0; i < (T) tour.size(); i++) {
         distance += distances[tour[i]][tour[(i + 1) % distances.rows()]];
     }
     return distance;
@@ -112,14 +112,14 @@ T tour_distance(Grid<T> &distances, vector<int> tour) {
 
 vector<pair<double, double>> create_n_cities(int n, int seed);
 
-template<class T=int>
-inline Grid<T> *distance_matrix(const vector<pair<double, double>> &cities) {
+template<class U=int>
+inline Grid<U> *distance_matrix(const vector<pair<double, double>> &cities) {
     auto n = cities.size();
-    auto matrix = new Grid<T>(n, n);
+    auto matrix = new Grid<U>(n, n);
     for (unsigned i = 0; i < n; i++) {
         (*matrix)[i][i] = 0;
     }
-    if (is_integral<T>::value) {
+    if (is_integral<U>::value) {
         for (unsigned i = 0; i < n - 1; i++) {
             for (unsigned j = i + 1; j < n; j++) {
                 (*matrix)[i][j] = (*matrix)[j][i] = round(sqrt(squared_distance(cities[i], cities[j])));
@@ -145,14 +145,14 @@ inline Grid<T> *k_nearest_neighbors(Grid<U> &distances, int k) {
     auto heap = vector<pair<U, T>>();
     heap.reserve(n);
 
-    for (unsigned i = 0; i < n; i++) {
+    for (T i = 0; i < n; i++) {
         heap.clear();
-        for (unsigned j = 0; j < n; j++) {
+        for (T j = 0; j < n; j++) {
             if (i != j) { heap.emplace_back(distances[i][j], j); }
         }
         make_heap(heap.begin(), heap.end(), cmp);
 
-        for (int neighbor = 0; neighbor < k; neighbor++) {
+        for (T neighbor = 0; neighbor < k; neighbor++) {
             (*knn)[i][neighbor] = heap.front().second;
             pop_heap(heap.begin(), heap.end(), cmp);
             heap.pop_back();

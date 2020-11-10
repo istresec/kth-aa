@@ -11,7 +11,8 @@ int main(int, char **) {
     cin.tie(nullptr);
 
     int n;
-    vector<int> tour;
+//    vector<int> tour;
+    vector<uint16_t> tour;
     vector<pair<double, double>> cities;
 
     cin >> n;
@@ -22,9 +23,10 @@ int main(int, char **) {
         cities.emplace_back(x, y);
     }
 
-    tour = travel(cities);
+    tour = travel<uint16_t, int>(cities);
     for (int i = 0; i < n; i++) {
-        printf("%d\n", tour[i]);
+//        printf("%d\n", tour[i]);
+        printf("%hu\n", (unsigned short int) tour[i]);
     }
 
     return 0;

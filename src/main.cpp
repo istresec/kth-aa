@@ -62,7 +62,7 @@ void demo_christofides(const string &alg_name, vector<pair<double, double>> &cit
         log_cities(cities, LOG_PATH, alg_name);
     }
     if (LOG) {
-        auto distance = tour_distance<double>(*distances, tour);
+        auto distance = tour_distance(*distances, tour);
         log_tour(tour, LOG_PATH, " 0 --> bare " + to_string(distance));
     }
 
