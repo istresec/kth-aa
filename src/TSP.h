@@ -71,8 +71,10 @@ public:
 template<class T, class U>
 vector<T> travel(const vector<pair<double, double>> &cities) {
     time_point<steady_clock, duration<long long int, ratio<1, 1000000000>>> deadline =
-            steady_clock::now() + milliseconds(1980);
+            steady_clock::now() + milliseconds(1950);
 //            steady_clock::now() + milliseconds(1990);
+// time_point<steady_clock, duration<long long int, ratio<1, 1000000000>>> deadline1 =
+//             steady_clock::now() + milliseconds(1650);
     auto distances = distance_matrix<U>(cities);
     vector<T> tour;
     if (cities.size() <= 2) {
@@ -605,7 +607,7 @@ bool choose_x(vector<T> &tour, unordered_set<pair<T, T>, pair_hash> &tour_edges,
                 _create_city_to_tour_idx(tour, city_to_tour_idx);
                 return true;
             } else {
-                if (joined.size() > 1) continue;
+                if (joined.size() > 3) continue;
                 return choose_y(tour, tour_edges, city_to_tour_idx, distances, knn, tour_1, tour_2i, gain_i, removed,
                                 joined, deadline);
             }
@@ -627,9 +629,9 @@ bool choose_y(vector<T> &tour, unordered_set<pair<T, T>, pair_hash> &tour_edges,
     T city_2i = tour[tour_2i];
 
     // original heuristic: check only 5 closest neighbours when doing y2, otherwise just 1
-//    int top = broken.size() == 2 ? 5 : top = 1;
-//    top *= 10;
-    int top = broken.size() == 2 ? 30 : top = 5;
+    // int top = broken.size() == 2 ? 5 : 1;
+    int top = (broken.size() == 2) ? 20 : ((broken.size() == 3) ? 5 : ((broken.size() == 4) ? 3 : 1));
+    // int top = (broken.size() == 2) ? 30 : ((broken.size() == 3) ? 5 : 5);
 
 
     // try to find an edge to add from closest neighbours
