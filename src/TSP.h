@@ -27,8 +27,8 @@ static vector<T> travel(const vector<pair<double, double>> &cities);
 template<class T, class U>
 static vector<T> travel_bruteforce(const vector<pair<double, double>> &cities, Grid<U> &distances);
 
-//template<class T>
-//static vector<int> travel_cw(const vector<pair<double, double>> &cities, Grid<T> &distances, int hub = 0);
+template<class T, class U>
+static vector<T> travel_cw(const vector<pair<double, double>> &cities, Grid<U> &distances, int hub = 0);
 
 template<class T=int, class U=int>
 vector<T> local_2opt(vector<T> tour_vector, Grid<U> &distances, Grid<T> &knn,
@@ -83,9 +83,9 @@ vector<T> travel(const vector<pair<double, double>> &cities) {
     } else if (cities.size() <= 13) {
         return travel_bruteforce<T, U>(cities, *distances);
     } else {
-//        tour = travel_naive(cities, *distances);
-//        tour = travel_cw(cities, *distances);
-        tour = travel_christofides<T, U>(*distances);
+        tour = travel_naive(cities, *distances);
+//        tour = travel_cw<uint16_t, int>(cities, *distances);
+        // tour = travel_christofides<T, U>(*distances);
 //    Grid<uint16_t> *knn = nullptr;
 //    tour = local_2opt_no_knn(tour, *distances, *knn, &deadline);
         Grid<T> *knn = k_nearest_neighbors<T>(*distances, min((int) (cities.size() - 1), 300));
@@ -96,11 +96,6 @@ vector<T> travel(const vector<pair<double, double>> &cities) {
     }
     return tour;
 }
-
-//template<class T>
-//inline bool compare_savings(tuple<int, int, T> t1, tuple<int, int, T> t2) {
-//    return get<2>(t1) > get<2>(t2);
-//}
 
 template<class T, class U>
 vector<T> travel_bruteforce(const vector<pair<double, double>> &cities, Grid<U> &distances) {
@@ -147,80 +142,84 @@ vector<T> travel_bruteforce(const vector<pair<double, double>> &cities, Grid<U> 
 //    return tour;
 //}
 
+template<class T>
+inline bool compare_savings(tuple<int, int, T> t1, tuple<int, int, T> t2) {
+    return get<2>(t1) > get<2>(t2);
+}
 
-//template<class T>
-//vector<tuple<int, int, T>> savings(const vector<pair<double, double>> &cities, Grid<T> &distances, int hub) {
-//    vector<tuple<int, int, T >> savings = vector<tuple<int, int, T >>();
-//    for (unsigned i = 0; i < cities.size() - 1; i++) {
-//        if (i == hub) continue;
-//        for (unsigned j = i + 1; j < cities.size(); j++) {
-//            savings.emplace_back(make_tuple(i, j, distances[hub][i] + distances[hub][j] - distances[i][j]));
-//        }
-//    }
-//    sort(savings.begin(), savings.end(), compare_savings<T>);
-//    return savings;
-//}
-//
-//// Clarke-Wright Savings Algorithm. City at index 0 used as hub.
-//template<class T>
-//vector<int> travel_cw(const vector<pair<double, double>> &cities, Grid<T> &distances, int hub) {
-//    // if only one city
-//    if (cities.size() == 1)
-//        return vector<int>{0};
-//
-//    vector<tuple<int, int, T>> s = savings(cities, distances, hub);
-//
-//    // initialize tours
-//    vector<int> tours[cities.size()];
-//    vector<int> empty_tour = vector<int>();
-//    for (int i = 0; i < (int) cities.size(); i++) {
-//        if (i == hub) {
-//            tours[i] = empty_tour;
-//        } else {
-//            tours[i] = vector<int>{i}; // instead of 0, i, 0 just use i
-//        }
-//    }
-//
-//    // algorithm
-//    vector<int> temp_tour;
-//    vector<int> first, second;
-//    int i, j;
-//    for (auto &it : s) {
-//        i = get<0>(it);
-//        j = get<1>(it);
-//        // if two distinct tours with endpoints i and j exist, if so combine them (O(1))
-//        if (not tours[i].empty() and not tours[j].empty() and tours[i].front() != tours[j].front()) {
-//            first = tours[i]; // remember tour with endpoint i
-//            second = tours[j]; // remember tour with endpoint j
-//            // remove tours with endpoints i and j while a new tour is constructed
-//            tours[first.front()] = tours[first.back()] = tours[second.front()] = tours[second.back()] = empty_tour;
-//
-//            if (first.front() == i)
-//                reverse(first.begin(), first.end()); // reverse tour with endpoint i if it starts with i
-//            if (second.front() != j)
-//                reverse(second.begin(), second.end()); // reverse tour with j if it doesn't start with j
-//
-//            // create new tour by joining the two
-//            first.insert(first.end(), second.begin(), second.end());
-//
-//            // remember endpoints of the new tour in array of endpoints for quick access
-//            tours[first.front()] = first;
-//            tours[first.back()] = first;
-//        }
-//    }
-//
-//    // create final tour
-//    vector<int> tour = vector<int>();
-//    for (i = 1; i < (int) cities.size(); i++) {
-//        if (not tours[i].empty())
-//            break;
-//    }
-//
-//    tour.emplace_back(hub);
-//    tour.insert(tour.end(), tours[i].begin(), tours[i].end());
-//
-//    return tour;
-//}
+template<class T>
+vector<tuple<int, int, T>> savings(const vector<pair<double, double>> &cities, Grid<T> &distances, int hub) {
+    vector<tuple<int, int, T >> savings = vector<tuple<int, int, T >>();
+    for (unsigned i = 0; i < cities.size() - 1; i++) {
+        if (i == hub) continue;
+        for (unsigned j = i + 1; j < cities.size(); j++) {
+            savings.emplace_back(make_tuple(i, j, distances[hub][i] + distances[hub][j] - distances[i][j]));
+        }
+    }
+    sort(savings.begin(), savings.end(), compare_savings<T>);
+    return savings;
+}
+
+// Clarke-Wright Savings Algorithm. City at index 0 used as hub.
+template<class T, class U>
+vector<T> travel_cw(const vector<pair<double, double>> &cities, Grid<U> &distances, int hub) {
+    // if only one city
+    if (cities.size() == 1)
+        return vector<T>{0};
+
+    vector<tuple<int, int, U>> s = savings(cities, distances, hub);
+
+    // initialize tours
+    vector<T> tours[cities.size()];
+    vector<T> empty_tour = vector<T>();
+    for (int i = 0; i < (int) cities.size(); i++) {
+        if (i == hub) {
+            tours[i] = empty_tour;
+        } else {
+            tours[i] = vector<T>{i}; // instead of 0, i, 0 just use i
+        }
+    }
+
+    // algorithm
+    vector<T> temp_tour;
+    vector<T> first, second;
+    int i, j;
+    for (auto &it : s) {
+        i = get<0>(it);
+        j = get<1>(it);
+        // if two distinct tours with endpoints i and j exist, if so combine them (O(1))
+        if (not tours[i].empty() and not tours[j].empty() and tours[i].front() != tours[j].front()) {
+            first = tours[i]; // remember tour with endpoint i
+            second = tours[j]; // remember tour with endpoint j
+            // remove tours with endpoints i and j while a new tour is constructed
+            tours[first.front()] = tours[first.back()] = tours[second.front()] = tours[second.back()] = empty_tour;
+
+            if (first.front() == i)
+                reverse(first.begin(), first.end()); // reverse tour with endpoint i if it starts with i
+            if (second.front() != j)
+                reverse(second.begin(), second.end()); // reverse tour with j if it doesn't start with j
+
+            // create new tour by joining the two
+            first.insert(first.end(), second.begin(), second.end());
+
+            // remember endpoints of the new tour in array of endpoints for quick access
+            tours[first.front()] = first;
+            tours[first.back()] = first;
+        }
+    }
+
+    // create final tour
+    vector<T> tour = vector<T>();
+    for (i = 1; i < (int) cities.size(); i++) {
+        if (not tours[i].empty())
+            break;
+    }
+
+    tour.emplace_back(hub);
+    tour.insert(tour.end(), tours[i].begin(), tours[i].end());
+
+    return tour;
+}
 
 template<class T, class U>
 inline U local2OptChange(Grid<T> &tour, Grid<U> &distances, T i, T j) {
