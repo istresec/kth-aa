@@ -14,6 +14,15 @@
 
 using namespace std;
 
+struct pair_hash {
+public:
+    template<typename T, typename U>
+    std::size_t operator()(const std::pair<T, U> &x) const {
+        return std::hash<T>()(x.first) ^ std::hash<U>()(x.second);
+    }
+};
+
+
 template<class T>
 class Grid { // https://stackoverflow.com/questions/936687/how-do-i-declare-a-2d-array-in-c-using-new
     size_t _rows;
@@ -41,8 +50,8 @@ public:
     }
 
     void print() {
-        for (int r = 0; r < rows(); r++) {
-            for (int c = 0; c < columns(); c++) {
+        for (size_t r = 0; r < rows(); r++) {
+            for (size_t c = 0; c < columns(); c++) {
                 cout << (*this)[r][c] << " ";
             }
             cout << endl;
@@ -110,7 +119,19 @@ U tour_distance(Grid<U> &distances, vector<T> tour) {
     return distance;
 }
 
-vector<pair<double, double>> create_n_cities(int n, int seed);
+vector<pair<double, double>> create_n_cities(int n, int seed) {
+    double lower_bound = -1e6;
+    double upper_bound = 1e6;
+    vector<pair<double, double >> cities = vector<pair<double, double >>();
+    cities.reserve(n);
+
+    uniform_real_distribution<double> unif(lower_bound, upper_bound);
+    default_random_engine generator(seed);
+    for (int i = 0; i < n; i++) {
+        cities.emplace_back(pair<double, double>(unif(generator), unif(generator)));
+    }
+    return cities;
+}
 
 template<class U=int>
 inline Grid<U> *distance_matrix(const vector<pair<double, double>> &cities) {
@@ -232,70 +253,79 @@ inline int reverse_segment_3opt_seq(vector<T> *tour, int i, int j, int k, Grid<U
     return 0;
 }
 
-//template<class T, class U>
-//inline int reverse_segment_3opt(vector<T> *tour, int i, int j, int k, Grid<U> &distances, bool apply) {
-//    if (i < 0 or i >= j - 1 or j >= k - 1 or k > tour->size()) { // TODO remove
-//        throw logic_error("Inconsistent state! Me no likey.");
-//    }
-//
-//    int a = (*tour)[(i - 1 + tour->size()) % tour->size()];
-//    int b = (*tour)[i];
-//    int c = (*tour)[j - 1];
-//    int d = (*tour)[j];
-//    int e = (*tour)[k - 1];
-//    int f = (*tour)[k % (*tour).size()];
-//
-//    // original distance
-//    int d0 = distances[a][b] + distances[c][d] + distances[e][f];
-//    int d1 = distances[a][c] + distances[b][d] + distances[e][f];
-//    int d2 = distances[a][b] + distances[c][e] + distances[d][f];
-//    int d3 = distances[a][d] + distances[e][b] + distances[c][f];
-//    int d4 = distances[f][b] + distances[c][d] + distances[e][a];
-//    int d5 = distances[a][e] + distances[d][b] + distances[c][f];
-//    int d6 = distances[a][c] + distances[b][e] + distances[d][f];
-//    int d7 = distances[a][d] + distances[e][c] + distances[b][f];
-//
-//    int best = min(min(min(min(min(min(d1, d2), d3), d4), d5), d6), d7);
-//
-//    if (best >= d0) return 0;
-//    if (not apply) return d0 - best;
-//
-//    if (best == d1) {
-//        reverse(tour->begin() + i, tour->begin() + j);
-//    } else if (best == d2) {
-//        reverse(tour->begin() + j, tour->begin() + k);
-//        reverse(tour->begin() + j, tour->begin() + k);
-//    } else if (best == d3) {
-//        vector<int> temp_tour = vector<int>{};
-//        temp_tour.insert(temp_tour.end(), tour->begin() + j, tour->begin() + k);
-//        temp_tour.insert(temp_tour.end(), tour->begin() + i, tour->begin() + j);
-//        copy_n(temp_tour.begin(), temp_tour.size(), &(*tour)[i]);
-//    } else if (best == d4) {
-//        reverse(tour->begin() + i, tour->begin() + k);
-//    } else if (best == d5) {
-//        // get ac bd ef like in d1
-//        reverse(tour->begin() + i, tour->begin() + j);
-//        // get ae db cf
-//        reverse(tour->begin() + i, tour->begin() + k);
-//    } else if (best == d6) {
-//        // get ac bd ef like with d1
-//        reverse(tour->begin() + i, tour->begin() + j);
-//        // now reverse from d to e
-//        reverse(tour->begin() + j, tour->begin() + k);
-//    } else if (best == d7) {
-//        // get ab ce df like with d2
-//        reverse(tour->begin() + j, tour->begin() + k);
-//        // now reverse from d to b
-//        reverse(tour->begin() + i, tour->begin() + k);
-//    } else {
-//        throw runtime_error("inconsistent state");
-//    }
-//
-//
-//    return d0 - best;
-//}
+template<class T, class U>
+inline int reverse_segment_3opt(vector<T> *tour, int i, int j, int k, Grid<U> &distances, bool apply) {
+    if (i < 0 or i >= j - 1 or j >= k - 1 or k > tour->size()) { // TODO remove
+        throw logic_error("Inconsistent state! Me no likey.");
+    }
 
-void log_cities(const vector<pair<double, double>> &cities, const string &path, const string &name);
+    int a = (*tour)[(i - 1 + tour->size()) % tour->size()];
+    int b = (*tour)[i];
+    int c = (*tour)[j - 1];
+    int d = (*tour)[j];
+    int e = (*tour)[k - 1];
+    int f = (*tour)[k % (*tour).size()];
+
+    // original distance
+    int d0 = distances[a][b] + distances[c][d] + distances[e][f];
+    int d1 = distances[a][c] + distances[b][d] + distances[e][f];
+    int d2 = distances[a][b] + distances[c][e] + distances[d][f];
+    int d3 = distances[a][d] + distances[e][b] + distances[c][f];
+    int d4 = distances[f][b] + distances[c][d] + distances[e][a];
+    int d5 = distances[a][e] + distances[d][b] + distances[c][f];
+    int d6 = distances[a][c] + distances[b][e] + distances[d][f];
+    int d7 = distances[a][d] + distances[e][c] + distances[b][f];
+
+    int best = min(min(min(min(min(min(d1, d2), d3), d4), d5), d6), d7);
+
+    if (best >= d0) return 0;
+    if (not apply) return d0 - best;
+
+    if (best == d1) {
+        reverse(tour->begin() + i, tour->begin() + j);
+    } else if (best == d2) {
+        reverse(tour->begin() + j, tour->begin() + k);
+        reverse(tour->begin() + j, tour->begin() + k);
+    } else if (best == d3) {
+        vector<int> temp_tour = vector<int>{};
+        temp_tour.insert(temp_tour.end(), tour->begin() + j, tour->begin() + k);
+        temp_tour.insert(temp_tour.end(), tour->begin() + i, tour->begin() + j);
+        copy_n(temp_tour.begin(), temp_tour.size(), &(*tour)[i]);
+    } else if (best == d4) {
+        reverse(tour->begin() + i, tour->begin() + k);
+    } else if (best == d5) {
+        // get ac bd ef like in d1
+        reverse(tour->begin() + i, tour->begin() + j);
+        // get ae db cf
+        reverse(tour->begin() + i, tour->begin() + k);
+    } else if (best == d6) {
+        // get ac bd ef like with d1
+        reverse(tour->begin() + i, tour->begin() + j);
+        // now reverse from d to e
+        reverse(tour->begin() + j, tour->begin() + k);
+    } else if (best == d7) {
+        // get ab ce df like with d2
+        reverse(tour->begin() + j, tour->begin() + k);
+        // now reverse from d to b
+        reverse(tour->begin() + i, tour->begin() + k);
+    } else {
+        throw runtime_error("inconsistent state");
+    }
+
+
+    return d0 - best;
+}
+
+void log_cities(const vector<pair<double, double>> &cities, const string &path, const string &name) {
+    ofstream outfile(path, ios_base::app);
+    outfile << "\ncities_name=" << name << "\n";
+    outfile << "cities=[";
+    for (const auto &city : cities) {
+        outfile << "(" << city.first << "," << city.second << "),";
+    }
+    outfile << "]\n";
+    outfile.close();
+}
 
 template<class T>
 void log_tour(vector<T> tour, const string &path, const string &name) {
@@ -307,6 +337,13 @@ void log_tour(vector<T> tour, const string &path, const string &name) {
     }
     outfile << "]\n";
     outfile.close();
+}
+
+template<class T>
+inline void create_city_to_tour_idx(const vector<T> &tour, vector<T> &city_to_tour_idx) {
+    for (T tour_idx = 0; tour_idx < (T) tour.size(); tour_idx++) {
+        city_to_tour_idx[tour[tour_idx]] = tour_idx;
+    }
 }
 
 #endif //KTH_AA_UTILITY_H
