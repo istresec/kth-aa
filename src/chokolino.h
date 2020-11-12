@@ -110,7 +110,7 @@ bool choose_x(vector<T> &tour, unordered_set<pair<T, T>, pair_hash> &tour_edges,
     pair<T, T> neighbourhood = make_pair((T) (tour_last + 1) % tour.size(),
                                          (T) ((tour_last + tour.size() - 1) % tour.size()));
 
-    // special case for x4
+    // special case for x4 from Helsgaun
     if (broken.size() == 4) {
         // give choice priority to longer edge
         if (distances[tour[neighbourhood.first]][tour_last] > distances[tour[neighbourhood.first]][tour_last]) {
@@ -126,7 +126,7 @@ bool choose_x(vector<T> &tour, unordered_set<pair<T, T>, pair_hash> &tour_edges,
 
         U gain_i = gain + distances[tour[tour_last]][city_2i];
 
-        // verify that X and Y are disjoint and that xi is not already in there...
+        // verify that xi is not already in X or Y
         if (joined.find(xi) == joined.end() and broken.find(xi) == broken.end()) {
             auto removed = broken;
             removed.emplace(xi);
@@ -168,7 +168,7 @@ bool choose_y(vector<T> &tour, unordered_set<pair<T, T>, pair_hash> &tour_edges,
 
     T city_2i = tour[tour_2i];
 
-    // original heuristic: check only 5 closest neighbours when doing y2, otherwise just 1
+    // original LKH heuristic: check only 5 closest neighbours when doing y2, otherwise just 1
     // int top = broken.size() == 2 ? 5 : 1;
     // int top = (broken.size() == 2) ? 30 : ((broken.size() == 3) ? 5 : 5);
     int top = (broken.size() == 2) ? 20 : ((broken.size() == 3) ? 5 : ((broken.size() == 4) ? 3 : 1)); // tuning->kattis
