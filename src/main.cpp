@@ -16,7 +16,7 @@
 using namespace std;
 using namespace chrono;
 
-bool DEBUG = false;
+bool DEBUG = true;
 int DEADLINE = 1950;
 bool LOG = false;
 string LOG_PATH = "/mnt/terra/xoding/kth-aa/logs/002.log";
@@ -261,13 +261,15 @@ int main(int, char **) {
 
     std::cout << "Let's travel tha woooooooooooooooooooorld!" << std::endl;
 
+    string cities_name = "Random -- ";
     int n = 1000;
     vector<int> tour;
     auto cities = create_n_cities(n, 721);
     VariadicTable<string, int, double> vt({"Algo", "Distance", "Time elapsed"});
 
+//    getline(cin, cities_name);
 //    cin >> n;
-//    vector<pair<double, double>> cities;
+//    cities.clear();
 //    for (int i = 0; i < n; i++) {
 //        double x, y;
 //        // scanf(" %lf %lf", &x, &y);
@@ -288,35 +290,37 @@ int main(int, char **) {
         k_nearest_neighbors<uint16_t>(*distances, 10)->print();
     }
 
-    measure_preprocessing_time(cities, vt);
-    vt.print(cout);
+//    measure_preprocessing_time(cities, vt);
+//    vt.print(cout);
 
-    demo_greedy("Greedy", cities, vt, travel_greedy);
-    demo_greedy("Greedy 2opt-20", cities, vt, travel_greedy, 20, false, true, false);
-    demo_greedy("Greedy 2opt-80", cities, vt, travel_greedy, 80, false, true, false);
-    demo_greedy("Greedy 3opt-20", cities, vt, travel_greedy, 20, false, false, true);
-    vt.print(cout);
+    demo_greedy(cities_name + "Greedy", cities, vt, travel_greedy);
+//    demo_greedy("Greedy 2opt-20", cities, vt, travel_greedy, 20, false, true, false);
+//    demo_greedy("Greedy 2opt-80", cities, vt, travel_greedy, 80, false, true, false);
+//    demo_greedy("Greedy 3opt-20", cities, vt, travel_greedy, 20, false, false, true);
+//    vt.print(cout);
 
-    demo_cw_alg("CW", cities, vt, travel_cw);
-    demo_cw_opt<uint16_t, int>("CW 2opt no knn", cities, vt, true, 20, travel_cw, local_2opt_no_knn);
-    demo_cw_opt<uint16_t, int>("CW 3opt", cities, vt, true, 150, travel_cw, local_3opt_no_knn_sequential);
-    demo_cw_opt<uint16_t, int>("CW 3opt", cities, vt, true, 150, travel_cw, local_3opt_no_knn_sequential);
-    vt.print(cout);
+    demo_cw_alg(cities_name + "CW", cities, vt, travel_cw);
+//    demo_cw_opt<uint16_t, int>("CW 2opt no knn", cities, vt, true, 20, travel_cw, local_2opt_no_knn);
+//    demo_cw_opt<uint16_t, int>("CW 3opt", cities, vt, true, 150, travel_cw, local_3opt_no_knn_sequential);
+//    demo_cw_opt<uint16_t, int>("CW 3opt", cities, vt, true, 150, travel_cw, local_3opt_no_knn_sequential);
+//    vt.print(cout);
 
-    demo_christofides("Christofides", cities, vt, 150, false, false);
+    demo_christofides(cities_name + "Christofides", cities, vt, 100, false, false);
     demo_christofides("Christofides 2opt-100", cities, vt, 100, true, false);
     demo_christofides("Christofides 2opt-100 3opt_no_knn_sequential", cities, vt, 100, true, true);
-    demo_christofides("Christofides 3opt_no_knn_sequential", cities, vt, 150, false, true);
-    demo_christofides("Christofides 2opt-chokolino-100", cities, vt, 100, true, false, true);
-    vt.print(cout);
+    demo_christofides("Christofides 3opt_no_knn_sequential", cities, vt, 100, false, true);
+//    demo_christofides("Christofides 2opt-chokolino-100", cities, vt, 100, true, false, true);
+//    vt.print(cout);
 
-    demo_christofides("c1: Christofides chokolino-100", cities, vt, 100, false, false, true);
-    cities = create_n_cities(n, 722);
-    demo_christofides("c2: Christofides chokolino-100", cities, vt, 100, false, false, true);
-    cities = create_n_cities(n, 723);
-    demo_christofides("c3: Christofides chokolino-100", cities, vt, 100, false, false, true);
-    cities = create_n_cities(n, 724);
-    demo_christofides("c4: Christofides chokolino-100", cities, vt, 100, false, false, true);
+    demo_christofides(cities_name + "Christofides chokolino-100", cities, vt, 100, false, false, true);
+//    cities = create_n_cities(n, 722);
+//    demo_christofides("c2: Christofides chokolino-100", cities, vt, 100, false, false, true);
+//    cities = create_n_cities(n, 723);
+//    demo_christofides("c3: Christofides chokolino-100", cities, vt, 100, false, false, true);
+//    cities = create_n_cities(n, 724);
+//    demo_christofides("c4: Christofides chokolino-100", cities, vt, 100, false, false, true);
+
+    demo_christofides(cities_name + "Christofides chokolino-2opt-3opt k=100", cities, vt, 100, true, true, true);
     vt.print(cout);
 
     return 0;

@@ -3,17 +3,22 @@ import os
 import matplotlib.pyplot as plt
 from pathlib import Path
 params = {'legend.fontsize': 'x-large',
-          'figure.figsize': (18, 14),
-         'axes.labelsize': 'x-large',
-         'axes.titlesize':'x-large',
-         'xtick.labelsize':'x-large',
-         'ytick.labelsize':'x-large'}
+          'figure.figsize': (10, 7),
+          'figure.titlesize': 'x-large',
+          'axes.labelsize': 'x-large',
+          'axes.labelsize': 'x-large',
+          'axes.titlesize':'x-large',
+          'xtick.labelsize':'x-large',
+          'ytick.labelsize':'x-large'}
+plt.style.use('bmh')
+# plt.style.use('dark_background')
+# plt.style.use('fivethirtyeight')
 plt.rcParams.update(params)
 
 # global vars
 LOG_PATH = "logs/002.log"
 CLEAR_LOG_FILE = False
-INCLUDE_RED_ARROWS = True
+INCLUDE_RED_ARROWS = False
 
 def plotTSP(city_tours):
     for city_name, city, tours in city_tours:
@@ -23,7 +28,7 @@ def plotTSP(city_tours):
                 x.append(city[i][0])
                 y.append(city[i][1])
             plt.plot(x, y, 'co')
-            a_scale = float(max(x))/float(300)
+            a_scale = float(max(x)-min(x))/float(300)
 
             if INCLUDE_RED_ARROWS:
                 for i, (tour_name_i, tour_i) in enumerate(tours[idx+1:]):
@@ -49,13 +54,17 @@ def plotTSP(city_tours):
                         color = 'g', length_includes_head = True)
 
             #Set axis too slitghtly larger than the set of x and y
-            plt.xlim(0, max(x)*1.1)
-            plt.ylim(0, max(y)*1.1)
+            plt.xlim(min(x)*1.1, max(x)*1.1)
+            plt.ylim(min(y)*1.1, max(y)*1.1)
 
             filename =  f"{city_name} -- t:{tour_name}"
-            plt.title(filename)
-            Path(os.path.join(LOG_PATH+"_pics", city_name)).mkdir(parents=True, exist_ok=True)
-            plt.savefig(os.path.join(os.path.join(LOG_PATH+"_pics", city_name), filename + ".png"), dpi=300)
+            title = f"{city_name}"
+            plt.title(title, fontsize=27)
+
+            # Path(os.path.join(LOG_PATH+"_pics", city_name)).mkdir(parents=True, exist_ok=True)
+            # plt.savefig(os.path.join(os.path.join(LOG_PATH+"_pics", city_name), filename + ".png"), dpi=300)
+            Path(LOG_PATH+"_pics").mkdir(parents=True, exist_ok=True)
+            plt.savefig(os.path.join(LOG_PATH+"_pics", filename + ".png"), dpi=300, bbox_inches='tight')
             # plt.show()
             plt.close()
 
@@ -63,7 +72,7 @@ def plotTSP(city_tours):
         #     plt.plot(x, y, 'co')
 
         #     # Set a scale for the arrow heads (there should be a reasonable default for this??)
-        #     a_scale = float(max(x))/float(300)
+        #     a_scale = float(max(x)-min(x))/float(300)
 
         #     # for i, tour_iteration in enumerate(tour[1:]):
         #     #     xi = []; yi = [];
@@ -88,9 +97,8 @@ def plotTSP(city_tours):
         #             color = 'g', length_includes_head = True)
 
         # #Set axis too slitghtly larger than the set of x and y
-        # plt.xlim(0, max(x)*1.1)
-        # plt.ylim(0, max(y)*1.1)
-
+        # plt.xlim(min(x)*1.1, max(x)*1.1)
+        # plt.ylim(min(y)*1.1, max(y)*1.1)
         # filename =  f"{city_name} -- t:{tour_name}"
         # plt.title(filename)
         # plt.savefig(os.path.join(LOG_PATH+"_pics", filename + ".png"), dpi=300)
