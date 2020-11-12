@@ -11,7 +11,7 @@
 using namespace std;
 using namespace chrono;
 
-// insures that edge defined by two towns is unique (the first in the pair is always smaller)
+// insures that edge defined by two towns is unique for sets (the first in the pair is always smaller)
 template<class T>
 pair<T, T> create_edge_pair(T t1, T t2) {
     if (t1 < t2) return pair(t1, t2);
@@ -100,7 +100,6 @@ inline bool generate_tour(const vector<T> &tour,
 }
 
 // chooses next edge to remove, part of the Lin-Kernighan algorithm implementation
-// implementation based on https://arthur.maheo.net/implementing-lin-kernighan-in-python/
 template<class T, class U>
 bool choose_x(vector<T> &tour, unordered_set<pair<T, T>, pair_hash> &tour_edges, vector<T> &city_to_tour_idx,
               Grid<U> &distances, Grid<T> &knn, T tour_1, T tour_last, U gain,
@@ -161,7 +160,6 @@ bool choose_x(vector<T> &tour, unordered_set<pair<T, T>, pair_hash> &tour_edges,
 }
 
 // chooses next edge to add, part of the Lin-Kernighan algorithm implementation
-// implementation based on https://arthur.maheo.net/implementing-lin-kernighan-in-python/
 template<class T, class U>
 bool choose_y(vector<T> &tour, unordered_set<pair<T, T>, pair_hash> &tour_edges, vector<T> &city_to_tour_idx,
               Grid<U> &distances, Grid<T> &knn, T tour_1, T tour_2i, U gain,
@@ -209,7 +207,6 @@ bool choose_y(vector<T> &tour, unordered_set<pair<T, T>, pair_hash> &tour_edges,
 }
 
 // main loop for the Lin-Kernighan algorithm
-// implementation based on the outline of https://arthur.maheo.net/implementing-lin-kernighan-in-python/
 template<class T, class U>
 bool lin_kernighan_main_loop(vector<T> &tour, unordered_set<pair<T, T>, pair_hash> &tour_edges,
                              vector<T> &city_to_tour_idx, Grid<U> &distances, Grid<T> &knn,
@@ -218,15 +215,12 @@ bool lin_kernighan_main_loop(vector<T> &tour, unordered_set<pair<T, T>, pair_has
     // "An Effective Implementation of the Lin-Kernighan Traveling Salesman Heuristic"
     // by Keld Helsgaun (Roskilde University, Denmark)
     // http://akira.ruc.dk/~keld/research/LKH/LKH-2.0/DOC/LKH_REPORT.pdf
-    // TODO (they might be a description from the original work by Lin & Kernighan?)
 
     auto set_x = unordered_set<pair<T, T>, pair_hash>(); // set of broken edges
     auto set_y = unordered_set<pair<T, T>, pair_hash>(); // set of added edges
 
     bool any_improvement = false;
     // step 2
-    //
-    // (the following loops basically look for a viable 2-opt solution, but then go on a bit further...
     for (T tour_i = 0; tour_i < (T) tour.size(); tour_i++) { // go through all possible towns for t1
         T city_1 = tour[tour_i];
 
@@ -236,7 +230,6 @@ bool lin_kernighan_main_loop(vector<T> &tour, unordered_set<pair<T, T>, pair_has
 
         bool inner_improvement = false;
         // step 3
-        //
         for (uint8_t n_idx = 0; n_idx <= 1; n_idx++) { // get towns around t1 for t2
             T tour_j = (tour_i + tour.size() + (n_idx == 0 ? -1 : 1)) % tour.size();
             if (inner_improvement) break;
@@ -248,7 +241,6 @@ bool lin_kernighan_main_loop(vector<T> &tour, unordered_set<pair<T, T>, pair_has
             set_x.emplace(x1);
 
             // step 4
-            //
             // find t3 to create a second edge for 2-opt
             for (T neighbor_idx = 0; neighbor_idx < (T) knn.columns(); neighbor_idx++) {
                 // TODO consider using some better metric than knn
@@ -263,7 +255,6 @@ bool lin_kernighan_main_loop(vector<T> &tour, unordered_set<pair<T, T>, pair_has
                         continue;
                     }
                     // step 6
-                    //
                     T tour_k = city_to_tour_idx[city_3];
                     set_y = unordered_set<pair<T, T>, pair_hash>(); // or set_y.clear()
                     set_y.emplace(y1);
@@ -281,7 +272,7 @@ bool lin_kernighan_main_loop(vector<T> &tour, unordered_set<pair<T, T>, pair_has
     return any_improvement;
 }
 
-// implementation based on https://arthur.maheo.net/implementing-lin-kernighan-in-python/
+// implementation based on outline from https://arthur.maheo.net/implementing-lin-kernighan-in-python/
 template<class T, class U>
 static vector<T> chokolino(vector<T> &tour, Grid<U> &distances, Grid<T> &knn,
                            time_point<steady_clock, duration<long long int, ratio<1, 1000000000>>> *deadline) {
