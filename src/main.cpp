@@ -312,12 +312,12 @@ int main(int, char **) {
 //    demoGreedy("Greedy chokolino-100", cities, vt, travelGreedy, 100, true, false, false);
 //    vt.print(cout);
 
-    demoCwAlg(citiesName + "CW", cities, vt, travel_cw);
-//    demoCwOpt<uint16_t, int>("CW 2opt no knn", cities, vt, true, 20, travel_cw, local2OptNoKnn);
-//    demoCwOpt<uint16_t, int>("CW 2opt-100", cities, vt, true, 100, travel_cw, local2Opt);
-//    demoCwOpt<uint16_t, int>("CW 3opt", cities, vt, true, 100, travel_cw, local3OptNoKnnSequential);
-    demoCwOpt<uint16_t, int>("CW chokolino-100", cities, vt, true, 100, travel_cw, nullptr, nullptr, chokolino);
-//    demoCwOpt<uint16_t, int>("CW 3opt", cities, vt, true, 150, travel_cw, local3OptNoKnnSequential);
+    demoCwAlg(citiesName + "CW", cities, vt, travelCw);
+//    demoCwOpt<uint16_t, int>("CW 2opt no knn", cities, vt, true, 20, travelCw, local2OptNoKnn);
+//    demoCwOpt<uint16_t, int>("CW 2opt-100", cities, vt, true, 100, travelCw, local2Opt);
+//    demoCwOpt<uint16_t, int>("CW 3opt", cities, vt, true, 100, travelCw, local3OptNoKnnSequential);
+    demoCwOpt<uint16_t, int>("CW chokolino-100", cities, vt, true, 100, travelCw, nullptr, nullptr, chokolino);
+//    demoCwOpt<uint16_t, int>("CW 3opt", cities, vt, true, 150, travelCw, local3OptNoKnnSequential);
 //    vt.print(cout);
 
     demoChristofides(citiesName + "Christofides", cities, vt, 100, false, false);

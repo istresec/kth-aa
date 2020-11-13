@@ -8,7 +8,7 @@
 using namespace std;
 
 template<class T>
-inline bool compare_savings(tuple<int, int, T> t1, tuple<int, int, T> t2) {
+inline bool compareSavings(tuple<int, int, T> t1, tuple<int, int, T> t2) {
     return get<2>(t1) > get<2>(t2);
 }
 
@@ -21,13 +21,13 @@ vector<tuple<int, int, T>> savings(const vector<pair<double, double>> &cities, G
             savings.emplace_back(make_tuple(i, j, distances[hub][i] + distances[hub][j] - distances[i][j]));
         }
     }
-    sort(savings.begin(), savings.end(), compare_savings<T>);
+    sort(savings.begin(), savings.end(), compareSavings<T>);
     return savings;
 }
 
 // Clarke-Wright Savings Algorithm. City at index 0 used as hub.
 template<class T, class U>
-vector<T> travel_cw(const vector<pair<double, double>> &cities, Grid<U> &distances, int hub) {
+vector<T> travelCw(const vector<pair<double, double>> &cities, Grid<U> &distances, int hub) {
     // if only one city
     if (cities.size() == 1)
         return vector<T>{0};
@@ -36,17 +36,17 @@ vector<T> travel_cw(const vector<pair<double, double>> &cities, Grid<U> &distanc
 
     // initialize tours
     vector<T> tours[cities.size()];
-    vector<T> empty_tour = vector<T>();
+    vector<T> emptyTour = vector<T>();
     for (T i = 0; i < (int) cities.size(); i++) {
         if (i == hub) {
-            tours[i] = empty_tour;
+            tours[i] = emptyTour;
         } else {
             tours[i] = vector<T>{i}; // instead of 0, i, 0 just use i
         }
     }
 
     // algorithm
-    vector<T> temp_tour;
+    vector<T> tempTour;
     vector<T> first, second;
     int i, j;
     for (auto &it : s) {
@@ -57,7 +57,7 @@ vector<T> travel_cw(const vector<pair<double, double>> &cities, Grid<U> &distanc
             first = tours[i]; // remember tour with endpoint i
             second = tours[j]; // remember tour with endpoint j
             // remove tours with endpoints i and j while a new tour is constructed
-            tours[first.front()] = tours[first.back()] = tours[second.front()] = tours[second.back()] = empty_tour;
+            tours[first.front()] = tours[first.back()] = tours[second.front()] = tours[second.back()] = emptyTour;
 
             if (first.front() == i)
                 reverse(first.begin(), first.end()); // reverse tour with endpoint i if it starts with i
