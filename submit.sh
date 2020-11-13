@@ -4,7 +4,7 @@
 # src/utility.cpp
 # src/blossom.h
 
-python2 minifier.py "src/blossom5_all_in_one_file.h" > "tmp/blossom5_all_in_one_file.h"
+python2 minifier.py "include/blossom5_all_in_one_file.h" > "tmp/blossom5_all_in_one_file.h"
 python2 minifier.py "src/chokolino.h" > "tmp/chokolino.h"
 python2 minifier.py "src/christofides.h" > "tmp/christofides.h"
 python2 minifier.py "src/main_kattis.cpp" > "tmp/main_kattis.cpp"
