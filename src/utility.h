@@ -25,28 +25,28 @@ public:
 
 template<class T>
 class Grid { // https://stackoverflow.com/questions/936687/how-do-i-declare-a-2d-array-in-c-using-new
-    size_t _rows;
-    size_t _columns;
+    size_t rows_;
+    size_t columns_;
     T *data;
 
 public:
     Grid(size_t rows, size_t columns)
-            : _rows{rows},
-              _columns{columns},
+            : rows_{rows},
+              columns_{columns},
               data{new T[rows * columns]} {}
 
     ~Grid() {
         delete[] data;
     }
 
-    [[nodiscard]] size_t rows() const { return _rows; }
+    [[nodiscard]] size_t rows() const { return rows_; }
 
-    [[nodiscard]] size_t columns() const { return _columns; }
+    [[nodiscard]] size_t columns() const { return columns_; }
 
-    T *operator[](size_t row) { return row * _columns + data; }
+    T *operator[](size_t row) { return row * columns_ + data; }
 
     T &operator()(size_t row, size_t column) {
-        return data[row * _columns + column];
+        return data[row * columns_ + column];
     }
 
     void print() {
@@ -63,34 +63,34 @@ public:
 
 class UnionFind {
 public:
-    explicit UnionFind(size_t n) : _rank(n, 0)
-//    , _size(n, 1)
+    explicit UnionFind(size_t n) : rank_(n, 0)
+//    , size_(n, 1)
     {
-        _parent.resize(n);
-        while (n--) _parent[n] = n;
+        parent_.resize(n);
+        while (n--) parent_[n] = n;
     }
 
 //    int size(int x) {
-//        return _size[x];
+//        return size_[x];
 //    }
 
     int find(int x) {
-        if (_parent[x] == x) return x;
-        return _parent[x] = find(_parent[x]); // path compression
+        if (parent_[x] == x) return x;
+        return parent_[x] = find(parent_[x]); // path compression
     }
 
     void merge(int x, int y) {
         x = find(x), y = find(y);
-        if (_rank[x] > _rank[y]) {
-            _parent[y] = x;
-//            _size[x] = _size[x] + _size[y];
+        if (rank_[x] > rank_[y]) {
+            parent_[y] = x;
+//            size_[x] = size_[x] + size_[y];
             return;
         }
 
-        _parent[x] = y;
-//        _size[y] = _size[x] + _size[y];
-        if (_rank[x] == _rank[y]) {
-            _rank[x]++;
+        parent_[x] = y;
+//        size_[y] = size_[x] + size_[y];
+        if (rank_[x] == rank_[y]) {
+            rank_[x]++;
         }
     }
 
@@ -99,19 +99,19 @@ public:
     }
 
 private:
-    vector<int> _parent;
-    vector<int> _rank;
-//    vector<int> _size;
+    vector<int> parent_;
+    vector<int> rank_;
+//    vector<int> size_;
 };
 
-inline double squared_distance(const pair<double, double> &t1, const pair<double, double> &t2) {
+inline double squaredDistance(const pair<double, double> &t1, const pair<double, double> &t2) {
     double dx = t1.first - t2.first;
     double dy = t1.second - t2.second;
     return dx * dx + dy * dy;
 }
 
 template<class T=int, class U=int>
-U tour_distance(Grid<U> &distances, vector<T> tour) {
+U tourDistance(Grid<U> &distances, vector<T> tour) {
     U distance = 0;
     for (T i = 0; i < (T) tour.size(); i++) {
         distance += distances[tour[i]][tour[(i + 1) % distances.rows()]];
@@ -119,13 +119,13 @@ U tour_distance(Grid<U> &distances, vector<T> tour) {
     return distance;
 }
 
-vector<pair<double, double>> create_n_cities(int n, int seed) {
-    double lower_bound = -1e6;
-    double upper_bound = 1e6;
+vector<pair<double, double>> createNCities(int n, int seed) {
+    double lowerBound = -1e6;
+    double upperBound = 1e6;
     vector<pair<double, double >> cities = vector<pair<double, double >>();
     cities.reserve(n);
 
-    uniform_real_distribution<double> unif(lower_bound, upper_bound);
+    uniform_real_distribution<double> unif(lowerBound, upperBound);
     default_random_engine generator(seed);
     for (int i = 0; i < n; i++) {
         cities.emplace_back(pair<double, double>(unif(generator), unif(generator)));
@@ -134,7 +134,7 @@ vector<pair<double, double>> create_n_cities(int n, int seed) {
 }
 
 template<class U=int>
-inline Grid<U> *distance_matrix(const vector<pair<double, double>> &cities) {
+inline Grid<U> *distanceMatrix(const vector<pair<double, double>> &cities) {
     auto n = cities.size();
     auto matrix = new Grid<U>(n, n);
     for (unsigned i = 0; i < n; i++) {
@@ -143,13 +143,13 @@ inline Grid<U> *distance_matrix(const vector<pair<double, double>> &cities) {
     if (is_integral<U>::value) {
         for (unsigned i = 0; i < n - 1; i++) {
             for (unsigned j = i + 1; j < n; j++) {
-                (*matrix)[i][j] = (*matrix)[j][i] = round(sqrt(squared_distance(cities[i], cities[j])));
+                (*matrix)[i][j] = (*matrix)[j][i] = round(sqrt(squaredDistance(cities[i], cities[j])));
             }
         }
     } else {
         for (unsigned i = 0; i < n - 1; i++) {
             for (unsigned j = i + 1; j < n; j++) {
-                (*matrix)[i][j] = (*matrix)[j][i] = sqrt(squared_distance(cities[i], cities[j]));
+                (*matrix)[i][j] = (*matrix)[j][i] = sqrt(squaredDistance(cities[i], cities[j]));
             }
         }
     }
@@ -158,7 +158,7 @@ inline Grid<U> *distance_matrix(const vector<pair<double, double>> &cities) {
 }
 
 template<class T, class U>
-inline Grid<T> *k_nearest_neighbors(Grid<U> &distances, int k) {
+inline Grid<T> *kNearestNeighbors(Grid<U> &distances, int k) {
     auto n = distances.rows();
     auto knn = new Grid<T>(n, k);
 
@@ -184,7 +184,7 @@ inline Grid<T> *k_nearest_neighbors(Grid<U> &distances, int k) {
 
 // reverse tour segment if it makes the tour shorter given three vertices (each vertex is used for its left edge)
 template<class T, class U>
-inline int reverse_segment_3opt_seq(vector<T> *tour, int i, int j, int k, Grid<U> &distances, bool) {
+inline int reverseSegment3OptSeq(vector<T> *tour, int i, int j, int k, Grid<U> &distances, bool) {
     int a = (*tour)[(i - 1 + tour->size()) % tour->size()];
     int b = (*tour)[i];
     int c = (*tour)[j - 1];
@@ -216,10 +216,10 @@ inline int reverse_segment_3opt_seq(vector<T> *tour, int i, int j, int k, Grid<U
 
     int d3 = distances[a][d] + distances[e][b] + distances[c][f];
     if (d0 > d3) {
-        vector<int> temp_tour = vector<int>{};
-        temp_tour.insert(temp_tour.end(), tour->begin() + j, tour->begin() + k);
-        temp_tour.insert(temp_tour.end(), tour->begin() + i, tour->begin() + j);
-        copy_n(temp_tour.begin(), temp_tour.size(), &(*tour)[i]);
+        vector<int> tempTour = vector<int>{};
+        tempTour.insert(tempTour.end(), tour->begin() + j, tour->begin() + k);
+        tempTour.insert(tempTour.end(), tour->begin() + i, tour->begin() + j);
+        copy_n(tempTour.begin(), tempTour.size(), &(*tour)[i]);
         return d0 - d3;
     }
 
@@ -253,70 +253,7 @@ inline int reverse_segment_3opt_seq(vector<T> *tour, int i, int j, int k, Grid<U
     return 0;
 }
 
-template<class T, class U>
-inline int reverse_segment_3opt(vector<T> *tour, int i, int j, int k, Grid<U> &distances, bool apply) {
-    if (i < 0 or i >= j - 1 or j >= k - 1 or k > tour->size()) { // TODO remove
-        throw logic_error("Inconsistent state! Me no likey.");
-    }
-
-    int a = (*tour)[(i - 1 + tour->size()) % tour->size()];
-    int b = (*tour)[i];
-    int c = (*tour)[j - 1];
-    int d = (*tour)[j];
-    int e = (*tour)[k - 1];
-    int f = (*tour)[k % (*tour).size()];
-
-    // original distance
-    int d0 = distances[a][b] + distances[c][d] + distances[e][f];
-    int d1 = distances[a][c] + distances[b][d] + distances[e][f];
-    int d2 = distances[a][b] + distances[c][e] + distances[d][f];
-    int d3 = distances[a][d] + distances[e][b] + distances[c][f];
-    int d4 = distances[f][b] + distances[c][d] + distances[e][a];
-    int d5 = distances[a][e] + distances[d][b] + distances[c][f];
-    int d6 = distances[a][c] + distances[b][e] + distances[d][f];
-    int d7 = distances[a][d] + distances[e][c] + distances[b][f];
-
-    int best = min(min(min(min(min(min(d1, d2), d3), d4), d5), d6), d7);
-
-    if (best >= d0) return 0;
-    if (not apply) return d0 - best;
-
-    if (best == d1) {
-        reverse(tour->begin() + i, tour->begin() + j);
-    } else if (best == d2) {
-        reverse(tour->begin() + j, tour->begin() + k);
-        reverse(tour->begin() + j, tour->begin() + k);
-    } else if (best == d3) {
-        vector<int> temp_tour = vector<int>{};
-        temp_tour.insert(temp_tour.end(), tour->begin() + j, tour->begin() + k);
-        temp_tour.insert(temp_tour.end(), tour->begin() + i, tour->begin() + j);
-        copy_n(temp_tour.begin(), temp_tour.size(), &(*tour)[i]);
-    } else if (best == d4) {
-        reverse(tour->begin() + i, tour->begin() + k);
-    } else if (best == d5) {
-        // get ac bd ef like in d1
-        reverse(tour->begin() + i, tour->begin() + j);
-        // get ae db cf
-        reverse(tour->begin() + i, tour->begin() + k);
-    } else if (best == d6) {
-        // get ac bd ef like with d1
-        reverse(tour->begin() + i, tour->begin() + j);
-        // now reverse from d to e
-        reverse(tour->begin() + j, tour->begin() + k);
-    } else if (best == d7) {
-        // get ab ce df like with d2
-        reverse(tour->begin() + j, tour->begin() + k);
-        // now reverse from d to b
-        reverse(tour->begin() + i, tour->begin() + k);
-    } else {
-        throw runtime_error("inconsistent state");
-    }
-
-
-    return d0 - best;
-}
-
-void log_cities(const vector<pair<double, double>> &cities, const string &path, const string &name) {
+void logCities(const vector<pair<double, double>> &cities, const string &path, const string &name) {
     ofstream outfile(path, ios_base::app);
     outfile << "\ncities_name=" << name << "\n";
     outfile << "cities=[";
@@ -328,7 +265,7 @@ void log_cities(const vector<pair<double, double>> &cities, const string &path, 
 }
 
 template<class T>
-void log_tour(vector<T> tour, const string &path, const string &name) {
+void logTour(vector<T> tour, const string &path, const string &name) {
     ofstream outfile(path, ios_base::app);
     outfile << "tour_name=" << name << "\n";
     outfile << "tour=[";
@@ -340,9 +277,9 @@ void log_tour(vector<T> tour, const string &path, const string &name) {
 }
 
 template<class T>
-inline void create_city_to_tour_idx(const vector<T> &tour, vector<T> &city_to_tour_idx) {
-    for (T tour_idx = 0; tour_idx < (T) tour.size(); tour_idx++) {
-        city_to_tour_idx[tour[tour_idx]] = tour_idx;
+inline void createCityToTourIdx(const vector<T> &tour, vector<T> &cityToTourIdx) {
+    for (T tourIdx = 0; tourIdx < (T) tour.size(); tourIdx++) {
+        cityToTourIdx[tour[tourIdx]] = tourIdx;
     }
 }
 

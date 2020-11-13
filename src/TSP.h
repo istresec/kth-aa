@@ -15,19 +15,19 @@ template<class T, class U>
 vector<T> travel(const vector<pair<double, double>> &cities) {
     time_point<steady_clock, duration<long long int, ratio<1, 1000000000>>> deadline =
             steady_clock::now() + milliseconds(1950);
-    auto distances = distance_matrix<U>(cities);
+    auto distances = distanceMatrix<U>(cities);
     vector<T> tour;
     if (cities.size() <= 2) {
         tour = vector<T>();
         for (T i = 0; i < cities.size(); i++) tour.emplace_back(i);
     } else if (cities.size() <= 13) {
-        return travel_bruteforce<T, U>(cities, *distances);
+        return travelBruteforce<T, U>(cities, *distances);
     } else {
-        tour = travel_christofides<T, U>(*distances);
-        Grid<T> *knn = k_nearest_neighbors<T>(*distances, min((int) (cities.size() - 1), 300));
+        tour = travelChristofides<T, U>(*distances);
+        Grid<T> *knn = kNearestNeighbors<T>(*distances, min((int) (cities.size() - 1), 300));
         tour = chokolino<T, U>(tour, *distances, *knn, &deadline);
-        tour = local_2opt<T, U>(tour, *distances, *knn, &deadline);
-        tour = local_3opt_no_knn_sequential<T, U>(tour, *distances, *knn, &deadline);
+        tour = local2Opt<T, U>(tour, *distances, *knn, &deadline);
+        tour = local3OptNoKnnSequential<T, U>(tour, *distances, *knn, &deadline);
     }
     return tour;
 }

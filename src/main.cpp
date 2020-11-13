@@ -6,8 +6,8 @@
 #include "clarke_wright.h"
 #include "christofides.h"
 #include "local2opt.h"
-#include "local2opt_no_knn.h"
-#include "local3opt.h"
+//#include "local2opt_no_knn.h"
+//#include "local3opt.h"
 #include "local3opt_no_knn_sequential.h"
 #include "chokolino.h"
 #include "utility.h"
@@ -21,88 +21,88 @@ int DEADLINE = 1950;
 bool LOG = false;
 string LOG_PATH = "/mnt/terra/xoding/kth-aa/logs/002.log";
 
-void measure_preprocessing_time(vector<pair<double, double>> &cities, VariadicTable<string, int, double> &vt) {
+void measurePreprocessingTime(vector<pair<double, double>> &cities, VariadicTable<string, int, double> &vt) {
     steady_clock::time_point start;
     duration<double> elapsed{};
 
     start = steady_clock::now();
-    auto distances = distance_matrix(cities);
+    auto distances = distanceMatrix(cities);
     elapsed = steady_clock::now() - start;
-    vt.addRow("distance_matrix", -1, elapsed.count());
+    vt.addRow("distanceMatrix", -1, elapsed.count());
 
     start = steady_clock::now();
-    k_nearest_neighbors<uint16_t>(*distances, 20);
+    kNearestNeighbors<uint16_t>(*distances, 20);
     elapsed = steady_clock::now() - start;
     vt.addRow("knn k=20", -1, elapsed.count());
 
     start = steady_clock::now();
-    k_nearest_neighbors<uint16_t>(*distances, 80);
+    kNearestNeighbors<uint16_t>(*distances, 80);
     elapsed = steady_clock::now() - start;
     vt.addRow("knn k=80", -1, elapsed.count());
 
     start = steady_clock::now();
-    k_nearest_neighbors<uint16_t>(*distances, 150);
+    kNearestNeighbors<uint16_t>(*distances, 150);
     elapsed = steady_clock::now() - start;
     vt.addRow("knn k=150", -1, elapsed.count());
 
     start = steady_clock::now();
-    k_nearest_neighbors<uint16_t>(*distances, 999);
+    kNearestNeighbors<uint16_t>(*distances, 999);
     elapsed = steady_clock::now() - start;
     vt.addRow("knn k=999", -1, elapsed.count());
 }
 
 template<class T=uint16_t, class U=int>
 void
-demo_greedy(const string &alg_name, vector<pair<double, double>> &cities, VariadicTable<string, int, double> &vt,
-            vector<T> (*construction_alg)(const vector<pair<double, double>> &, Grid<U> &), int k = 80,
-            bool use_lin_kernighan = false, bool use2opt = false, bool use3opt = false,
-            bool use_deadline = true) {
+demoGreedy(const string &algName, vector<pair<double, double>> &cities, VariadicTable<string, int, double> &vt,
+           vector<T> (*constructionAlg)(const vector<pair<double, double>> &, Grid<U> &), int k = 80,
+           bool useLinKernighan = false, bool use2Opt = false, bool use3Opt = false,
+           bool useDeadline = true) {
     if (DEBUG) {
-        cout << alg_name << ": ";
+        cout << algName << ": ";
     }
     time_point<steady_clock, duration<long long int, ratio<1, 1000000000>>> deadline =
             steady_clock::now() + milliseconds(DEADLINE);
 
     auto start = steady_clock::now();
-    auto distances = distance_matrix(cities);
-    auto tour = construction_alg(cities, *distances);
+    auto distances = distanceMatrix(cities);
+    auto tour = constructionAlg(cities, *distances);
 
     if (LOG) {
-        log_cities(cities, LOG_PATH, alg_name);
+        logCities(cities, LOG_PATH, algName);
     }
     if (LOG) {
-        auto distance = tour_distance(*distances, tour);
-        log_tour(tour, LOG_PATH, " 0 --> bare " + to_string(distance));
+        auto distance = tourDistance(*distances, tour);
+        logTour(tour, LOG_PATH, " 0 --> bare " + to_string(distance));
     }
 
     Grid<uint16_t> *knn;
-    if (use2opt or use3opt or use_lin_kernighan) {
-        knn = k_nearest_neighbors<uint16_t>(*distances, k);
-        if (use_lin_kernighan) {
-            tour = chokolino(tour, *distances, *knn, use_deadline ? &deadline : nullptr);
+    if (use2Opt or use3Opt or useLinKernighan) {
+        knn = kNearestNeighbors<uint16_t>(*distances, k);
+        if (useLinKernighan) {
+            tour = chokolino(tour, *distances, *knn, useDeadline ? &deadline : nullptr);
             if (LOG) {
-                int distance = tour_distance(*distances, tour);
-                log_tour(tour, LOG_PATH, " 3 --> CHOKOLINO " + to_string(distance));
+                int distance = tourDistance(*distances, tour);
+                logTour(tour, LOG_PATH, " 3 --> CHOKOLINO " + to_string(distance));
             }
         }
-        if (use2opt) {
-            tour = local_2opt(tour, *distances, *knn, use_deadline ? &deadline : nullptr);
+        if (use2Opt) {
+            tour = local2Opt(tour, *distances, *knn, useDeadline ? &deadline : nullptr);
             if (LOG) {
-                int distance = tour_distance(*distances, tour);
-                log_tour(tour, LOG_PATH, " 1 --> 2opt " + to_string(distance));
+                int distance = tourDistance(*distances, tour);
+                logTour(tour, LOG_PATH, " 1 --> 2opt " + to_string(distance));
             }
         }
-        if (use3opt) {
-            tour = local_3opt_no_knn_sequential(tour, *distances, *knn, use_deadline ? &deadline : nullptr);
+        if (use3Opt) {
+            tour = local3OptNoKnnSequential(tour, *distances, *knn, useDeadline ? &deadline : nullptr);
             if (LOG) {
-                int distance = tour_distance(*distances, tour);
-                log_tour(tour, LOG_PATH, " 2 --> 3opt " + to_string(distance));
+                int distance = tourDistance(*distances, tour);
+                logTour(tour, LOG_PATH, " 2 --> 3opt " + to_string(distance));
             }
         }
     }
 
     duration<double> elapsed = steady_clock::now() - start;
-    int distance = tour_distance(*distances, tour);
+    int distance = tourDistance(*distances, tour);
     if (DEBUG) {
         for (int i: tour) {
             cout << i << " ";
@@ -110,58 +110,58 @@ demo_greedy(const string &alg_name, vector<pair<double, double>> &cities, Variad
         cout << endl;
     }
 
-    vt.addRow(alg_name, distance, elapsed.count());
+    vt.addRow(algName, distance, elapsed.count());
 }
 
-void demo_christofides(const string &alg_name, vector<pair<double, double>> &cities,
-                       VariadicTable<string, int, double> &vt, int k = 80, bool use2opt = false, bool use3opt = false,
-                       bool use_lin_kernighan = false) {
+void demoChristofides(const string &algName, vector<pair<double, double>> &cities,
+                      VariadicTable<string, int, double> &vt, int k = 80, bool use2Opt = false, bool use3Opt = false,
+                      bool useLinKernighan = false) {
     if (DEBUG) {
-        cout << alg_name << ": ";
+        cout << algName << ": ";
     }
     time_point<steady_clock, duration<long long int, ratio<1, 1000000000>>> deadline =
             steady_clock::now() + milliseconds(DEADLINE);
     auto start = steady_clock::now();
-    auto distances = distance_matrix<double>(cities);
-    auto tour = travel_christofides<uint16_t, double>(*distances);
+    auto distances = distanceMatrix<double>(cities);
+    auto tour = travelChristofides<uint16_t, double>(*distances);
 
     if (LOG) {
-        log_cities(cities, LOG_PATH, alg_name);
+        logCities(cities, LOG_PATH, algName);
     }
     if (LOG) {
-        auto distance = tour_distance(*distances, tour);
-        log_tour(tour, LOG_PATH, " 0 --> bare " + to_string(distance));
+        auto distance = tourDistance(*distances, tour);
+        logTour(tour, LOG_PATH, " 0 --> bare " + to_string(distance));
     }
 
     Grid<uint16_t> *knn;
-    if (use2opt or use3opt or use_lin_kernighan) {
-        knn = k_nearest_neighbors<uint16_t>(*distances, k);
-        if (use_lin_kernighan) {
+    if (use2Opt or use3Opt or useLinKernighan) {
+        knn = kNearestNeighbors<uint16_t>(*distances, k);
+        if (useLinKernighan) {
             tour = chokolino(tour, *distances, *knn, &deadline);
             if (LOG) {
-                int distance = tour_distance(*distances, tour);
-                log_tour(tour, LOG_PATH, " 3 --> CHOKOLINO " + to_string(distance));
+                int distance = tourDistance(*distances, tour);
+                logTour(tour, LOG_PATH, " 3 --> CHOKOLINO " + to_string(distance));
             }
         }
-        if (use2opt) {
-            tour = local_2opt(tour, *distances, *knn, &deadline);
+        if (use2Opt) {
+            tour = local2Opt(tour, *distances, *knn, &deadline);
             if (LOG) {
-                int distance = tour_distance(*distances, tour);
-                log_tour(tour, LOG_PATH, " 1 --> 2opt " + to_string(distance));
+                int distance = tourDistance(*distances, tour);
+                logTour(tour, LOG_PATH, " 1 --> 2opt " + to_string(distance));
             }
         }
-        if (use3opt) {
-            tour = local_3opt_no_knn_sequential(tour, *distances, *knn, &deadline);
-//            tour = local_3opt(tour, *distances, *knn, &deadline);
+        if (use3Opt) {
+            tour = local3OptNoKnnSequential(tour, *distances, *knn, &deadline);
+//            tour = local3Opt(tour, *distances, *knn, &deadline);
             if (LOG) {
-                int distance = tour_distance(*distances, tour);
-                log_tour(tour, LOG_PATH, " 2 --> 3opt " + to_string(distance));
+                int distance = tourDistance(*distances, tour);
+                logTour(tour, LOG_PATH, " 2 --> 3opt " + to_string(distance));
             }
         }
     }
 
     duration<double> elapsed = steady_clock::now() - start;
-    int distance = tour_distance(*distances, tour);
+    int distance = tourDistance(*distances, tour);
     if (DEBUG) {
         for (int i: tour) {
             cout << i << " ";
@@ -169,90 +169,102 @@ void demo_christofides(const string &alg_name, vector<pair<double, double>> &cit
         cout << endl;
     }
 
-    vt.addRow(alg_name, distance, elapsed.count());
+    vt.addRow(algName, distance, elapsed.count());
 }
 
-void demo_cw_alg(const string &alg_name, vector<pair<double, double>> &cities, VariadicTable<string, int, double> &vt,
-                 vector<int> (*construction_alg)(const vector<pair<double, double>> &, Grid<int> &, int), int hub = 0) {
+void demoCwAlg(const string &algName, vector<pair<double, double>> &cities, VariadicTable<string, int, double> &vt,
+               vector<int> (*constructionAlg)(const vector<pair<double, double>> &, Grid<int> &, int), int hub = 0) {
     if (DEBUG) {
-        cout << alg_name << ": ";
+        cout << algName << ": ";
     }
 
     auto start = steady_clock::now();
-    auto distances = distance_matrix(cities);
-    auto tour = construction_alg(cities, *distances, hub);
+    auto distances = distanceMatrix(cities);
+    auto tour = constructionAlg(cities, *distances, hub);
 
     duration<double> elapsed = steady_clock::now() - start;
-    int distance = tour_distance(*distances, tour);
+    int distance = tourDistance(*distances, tour);
     if (DEBUG) {
         for (int i: tour) {
             cout << i << " ";
         }
         cout << endl;
     }
-    vt.addRow(alg_name, distance, elapsed.count());
+    vt.addRow(algName, distance, elapsed.count());
 
     if (LOG) {
-        log_cities(cities, LOG_PATH, alg_name);
+        logCities(cities, LOG_PATH, algName);
     }
     if (LOG) {
-        log_tour(tour, LOG_PATH, "d=" + to_string(distance));
+        logTour(tour, LOG_PATH, "d=" + to_string(distance));
     }
 }
 
 template<class T, class U>
-void demo_cw_opt(
-        string alg_name,
+void demoCwOpt(
+        string algName,
         vector<pair<double, double>> &cities,
         VariadicTable<string, int, double> &vt,
-        bool use_deadline,
+        bool useDeadline,
         int k,
-        vector<T> (*construction_alg)(const vector<pair<double, double>> &, Grid<U> &, int),
-        vector<T> (*opt_alg)(vector<T>, Grid<U> &, Grid<T> &,
-                             time_point<steady_clock, duration<long long int, ratio<1, 1000000000>>> *),
-        vector<T> (*opt_alg2)(vector<T>, Grid<U> &, Grid<T> &,
-                              time_point<steady_clock, duration<long long int, ratio<1, 1000000000>>> *) = nullptr) {
-    alg_name = use_deadline ? alg_name : alg_name + " NO deadline";
+        vector<T> (*constructionAlg)(const vector<pair<double, double>> &, Grid<U> &, int),
+        vector<T> (*optAlg)(vector<T>, Grid<U> &, Grid<T> &,
+                            time_point<steady_clock, duration<long long int, ratio<1, 1000000000>>> *) = nullptr,
+        vector<T> (*optAlg2)(vector<T>, Grid<U> &, Grid<T> &,
+                             time_point<steady_clock, duration<long long int, ratio<1, 1000000000>>> *) = nullptr,
+        vector<T> (*optAlgChokolino)(
+                vector<T> &, Grid<U> &, Grid<T> &,
+                time_point<steady_clock, duration<long long int, ratio<1, 1000000000>>> *) = nullptr) {
+    algName = useDeadline ? algName : algName + " NO deadline";
     if (DEBUG) {
-        cout << alg_name;
+        cout << algName;
     }
 
     time_point<steady_clock, duration<long long int, ratio<1, 1000000000>>> deadline =
             steady_clock::now() + milliseconds(DEADLINE);
     auto start = steady_clock::now();
-    auto distances = distance_matrix(cities);
-    Grid<T> *knn = k_nearest_neighbors<T>(*distances, k);
+    auto distances = distanceMatrix(cities);
+    Grid<T> *knn = kNearestNeighbors<T>(*distances, k);
 
-    auto tour = construction_alg(cities, *distances, 0);
+    auto tour = constructionAlg(cities, *distances, 0);
     if (LOG) {
-        log_cities(cities, LOG_PATH, alg_name);
+        logCities(cities, LOG_PATH, algName);
     }
     if (LOG) {
-        int distance = tour_distance(*distances, tour);
-        log_tour(tour, LOG_PATH, "0 --> bare d=" + to_string(distance));
+        int distance = tourDistance(*distances, tour);
+        logTour(tour, LOG_PATH, "0 --> bare d=" + to_string(distance));
     }
-    tour = opt_alg(tour, *distances, *knn, use_deadline ? &deadline : nullptr);
-    if (LOG) {
-        int distance = tour_distance(*distances, tour);
-        log_tour(tour, LOG_PATH, "1 --> opt_1 d=" + to_string(distance));
-    }
-    if (opt_alg2 != nullptr) {
-        tour = opt_alg(tour, *distances, *knn, use_deadline ? &deadline : nullptr);
+    if (optAlg != nullptr) {
+        tour = optAlg(tour, *distances, *knn, useDeadline ? &deadline : nullptr);
         if (LOG) {
-            int distance = tour_distance(*distances, tour);
-            log_tour(tour, LOG_PATH, "2 --> opt_2 d=" + to_string(distance));
+            int distance = tourDistance(*distances, tour);
+            logTour(tour, LOG_PATH, "1 --> opt_1 d=" + to_string(distance));
+        }
+    }
+    if (optAlg2 != nullptr) {
+        tour = optAlg(tour, *distances, *knn, useDeadline ? &deadline : nullptr);
+        if (LOG) {
+            int distance = tourDistance(*distances, tour);
+            logTour(tour, LOG_PATH, "2 --> opt_2 d=" + to_string(distance));
+        }
+    }
+    if (optAlgChokolino != nullptr) {
+        tour = optAlgChokolino(tour, *distances, *knn, useDeadline ? &deadline : nullptr);
+        if (LOG) {
+            int distance = tourDistance(*distances, tour);
+            logTour(tour, LOG_PATH, "3 --> opt_2 d=" + to_string(distance));
         }
     }
 
     duration<double> elapsed = steady_clock::now() - start;
-    int distance = tour_distance(*distances, tour);
+    int distance = tourDistance(*distances, tour);
     if (DEBUG) {
         for (int i: tour) {
             cout << i << " ";
         }
         cout << endl;
     }
-    vt.addRow(alg_name, distance, elapsed.count());
+    vt.addRow(algName, distance, elapsed.count());
 }
 
 int main(int, char **) {
@@ -261,10 +273,10 @@ int main(int, char **) {
 
     std::cout << "Let's travel tha woooooooooooooooooooorld!" << std::endl;
 
-    string cities_name = "Random -- ";
+    string citiesName = "Random -- ";
     int n = 1000;
     vector<int> tour;
-    auto cities = create_n_cities(n, 721);
+    auto cities = createNCities(n, 721);
     VariadicTable<string, int, double> vt({"Algo", "Distance", "Time elapsed"});
 
 //    getline(cin, cities_name);
@@ -284,43 +296,46 @@ int main(int, char **) {
             cout << i << ' ' << get<0>(cities[i]) << ' ' << get<1>(cities[i]) << endl;
         }
         cout << "Distance matrix:" << endl;
-        auto distances = distance_matrix(cities);
+        auto distances = distanceMatrix(cities);
         distances->print();
         cout << "KNN matrix:" << endl;
-        k_nearest_neighbors<uint16_t>(*distances, 10)->print();
+        kNearestNeighbors<uint16_t>(*distances, 10)->print();
     }
 
-//    measure_preprocessing_time(cities, vt);
+    measurePreprocessingTime(cities, vt);
 //    vt.print(cout);
 
-    demo_greedy(cities_name + "Greedy", cities, vt, travel_greedy);
-//    demo_greedy("Greedy 2opt-20", cities, vt, travel_greedy, 20, false, true, false);
-//    demo_greedy("Greedy 2opt-80", cities, vt, travel_greedy, 80, false, true, false);
-//    demo_greedy("Greedy 3opt-20", cities, vt, travel_greedy, 20, false, false, true);
+    demoGreedy(citiesName + "Greedy", cities, vt, travelGreedy);
+//    demoGreedy("Greedy 2opt-100", cities, vt, travelGreedy, 100, false, true, false);
+//    demoGreedy("Greedy 2opt-80", cities, vt, travelGreedy, 80, false, true, false);
+//    demoGreedy("Greedy 3opt-100", cities, vt, travelGreedy, 100, false, false, true);
+//    demoGreedy("Greedy chokolino-100", cities, vt, travelGreedy, 100, true, false, false);
 //    vt.print(cout);
 
-    demo_cw_alg(cities_name + "CW", cities, vt, travel_cw);
-//    demo_cw_opt<uint16_t, int>("CW 2opt no knn", cities, vt, true, 20, travel_cw, local_2opt_no_knn);
-//    demo_cw_opt<uint16_t, int>("CW 3opt", cities, vt, true, 150, travel_cw, local_3opt_no_knn_sequential);
-//    demo_cw_opt<uint16_t, int>("CW 3opt", cities, vt, true, 150, travel_cw, local_3opt_no_knn_sequential);
+    demoCwAlg(citiesName + "CW", cities, vt, travel_cw);
+//    demoCwOpt<uint16_t, int>("CW 2opt no knn", cities, vt, true, 20, travel_cw, local2OptNoKnn);
+//    demoCwOpt<uint16_t, int>("CW 2opt-100", cities, vt, true, 100, travel_cw, local2Opt);
+//    demoCwOpt<uint16_t, int>("CW 3opt", cities, vt, true, 100, travel_cw, local3OptNoKnnSequential);
+    demoCwOpt<uint16_t, int>("CW chokolino-100", cities, vt, true, 100, travel_cw, nullptr, nullptr, chokolino);
+//    demoCwOpt<uint16_t, int>("CW 3opt", cities, vt, true, 150, travel_cw, local3OptNoKnnSequential);
 //    vt.print(cout);
 
-    demo_christofides(cities_name + "Christofides", cities, vt, 100, false, false);
-    demo_christofides("Christofides 2opt-100", cities, vt, 100, true, false);
-    demo_christofides("Christofides 2opt-100 3opt_no_knn_sequential", cities, vt, 100, true, true);
-    demo_christofides("Christofides 3opt_no_knn_sequential", cities, vt, 100, false, true);
-//    demo_christofides("Christofides 2opt-chokolino-100", cities, vt, 100, true, false, true);
+    demoChristofides(citiesName + "Christofides", cities, vt, 100, false, false);
+    demoChristofides("Christofides 2opt-100", cities, vt, 100, true, false);
+    demoChristofides("Christofides 2opt-100 3opt_no_knn_sequential", cities, vt, 100, true, true);
+    demoChristofides("Christofides 3opt_no_knn_sequential", cities, vt, 100, false, true);
+//    demoChristofides("Christofides 2opt-chokolino-100", cities, vt, 100, true, false, true);
 //    vt.print(cout);
 
-    demo_christofides(cities_name + "Christofides chokolino-100", cities, vt, 100, false, false, true);
-//    cities = create_n_cities(n, 722);
-//    demo_christofides("c2: Christofides chokolino-100", cities, vt, 100, false, false, true);
-//    cities = create_n_cities(n, 723);
-//    demo_christofides("c3: Christofides chokolino-100", cities, vt, 100, false, false, true);
-//    cities = create_n_cities(n, 724);
-//    demo_christofides("c4: Christofides chokolino-100", cities, vt, 100, false, false, true);
+    demoChristofides(citiesName + "Christofides chokolino-100", cities, vt, 100, false, false, true);
+//    cities = createNCities(n, 722);
+//    demoChristofides("c2: Christofides chokolino-100", cities, vt, 100, false, false, true);
+//    cities = createNCities(n, 723);
+//    demoChristofides("c3: Christofides chokolino-100", cities, vt, 100, false, false, true);
+//    cities = createNCities(n, 724);
+//    demoChristofides("c4: Christofides chokolino-100", cities, vt, 100, false, false, true);
 
-    demo_christofides(cities_name + "Christofides chokolino-2opt-3opt k=100", cities, vt, 100, true, true, true);
+    demoChristofides(citiesName + "Christofides chokolino-2opt-3opt k=100", cities, vt, 100, true, true, true);
     vt.print(cout);
 
     return 0;

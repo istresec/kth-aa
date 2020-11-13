@@ -8,20 +8,20 @@
 using namespace std;
 
 template<class T, class U>
-vector<T> travel_bruteforce(const vector<pair<double, double>> &cities, Grid<U> &distances) {
-    auto city_indices = vector<T>();
-    city_indices.reserve(cities.size());
-    for (T i = 0; i < cities.size(); i++) city_indices.emplace_back(i);
+vector<T> travelBruteforce(const vector<pair<double, double>> &cities, Grid<U> &distances) {
+    auto cityIndices = vector<T>();
+    cityIndices.reserve(cities.size());
+    for (T i = 0; i < cities.size(); i++) cityIndices.emplace_back(i);
 
-    auto best = city_indices;
-    U best_distance = -1;
+    auto best = cityIndices;
+    U bestDistance = -1;
     do {
-        auto current_distance = tour_distance(distances, city_indices);
-        if (best_distance == -1 or current_distance < best_distance) {
-            best_distance = current_distance;
-            best = city_indices;
+        auto currentDistance = tourDistance(distances, cityIndices);
+        if (bestDistance == -1 or currentDistance < bestDistance) {
+            bestDistance = currentDistance;
+            best = cityIndices;
         }
-    } while (next_permutation(city_indices.begin() + 1, city_indices.end()));
+    } while (next_permutation(cityIndices.begin() + 1, cityIndices.end()));
 
     return best;
 }

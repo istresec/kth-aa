@@ -31,16 +31,16 @@ inline void local2OptUpdate(Grid<T> &tour, T i, T j) {
 }
 
 template<class T, class U>
-vector<T> local_2opt(vector<T> tour_vector, Grid<U> &distances, Grid<T> &knn,
-                     time_point<steady_clock, duration<long long int, ratio<1, 1000000000>>> *deadline) {
+vector<T> local2Opt(vector<T> tourVector, Grid<U> &distances, Grid<T> &knn,
+                    time_point<steady_clock, duration<long long int, ratio<1, 1000000000>>> *deadline) {
     // TODO use a tree structure for storing tour so that reverse is fast
     bool sequential = true;
 
-    T n = tour_vector.size();
+    T n = tourVector.size();
     auto tour = Grid<T>(n, 2);
     for (T i = 0; i < n; i++) {
-        tour[tour_vector[i]][0] = tour_vector[i == 0 ? n - 1 : i - 1];
-        tour[tour_vector[i]][1] = tour_vector[i == n - 1 ? 0 : i + 1];
+        tour[tourVector[i]][0] = tourVector[i == 0 ? n - 1 : i - 1];
+        tour[tourVector[i]][1] = tourVector[i == n - 1 ? 0 : i + 1];
     }
 
     U bestChange;
@@ -58,16 +58,16 @@ vector<T> local_2opt(vector<T> tour_vector, Grid<U> &distances, Grid<T> &knn,
                 U change1 = local2OptChange(tour, distances, a, b);
                 U change2 = local2OptChange(tour, distances, tour[a][0], tour[b][0]);
                 U change = change1 > change2 ? change1 : change2;
-                T better_a = change1 > change2 ? a : tour[a][0];
-                T better_b = change1 > change2 ? b : tour[b][0];
+                T betterA = change1 > change2 ? a : tour[a][0];
+                T betterB = change1 > change2 ? b : tour[b][0];
 
                 if (sequential and change > 0) {
-                    local2OptUpdate(tour, better_a, better_b);
+                    local2OptUpdate(tour, betterA, betterB);
                 }
                 if (change > bestChange) {
                     bestChange = change;
-                    best_i = better_a;
-                    best_j = better_b;
+                    best_i = betterA;
+                    best_j = betterB;
                 }
             }
         }
@@ -80,10 +80,10 @@ vector<T> local_2opt(vector<T> tour_vector, Grid<U> &distances, Grid<T> &knn,
 
     T current = 0;
     for (unsigned i = 0; i < n; i++) {
-        tour_vector[i] = current;
+        tourVector[i] = current;
         current = tour[current][1];
     }
-    return tour_vector;
+    return tourVector;
 }
 
 #endif //KTH_AA_LOCAL2OPT_H

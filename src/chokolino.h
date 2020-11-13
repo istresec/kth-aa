@@ -146,7 +146,7 @@ bool choose_x(vector<T> &tour, unordered_set<pair<T, T>, pair_hash> &tour_edges,
             if (is_tour) {
                 tour = new_tour;
                 tour_edges = get_tour_edges(tour);
-                create_city_to_tour_idx(tour, city_to_tour_idx);
+                createCityToTourIdx(tour, city_to_tour_idx);
                 return true;
             } else {
                 if (joined.size() > 3) continue;
@@ -280,7 +280,7 @@ static vector<T> chokolino(vector<T> &tour, Grid<U> &distances, Grid<T> &knn,
     unordered_set<pair<T, T>, pair_hash> tour_edges = get_tour_edges(tour);
     vector<T> city_to_tour_idx(tour.size());
     city_to_tour_idx.reserve(tour.size());
-    create_city_to_tour_idx(tour, city_to_tour_idx);
+    createCityToTourIdx(tour, city_to_tour_idx);
     while ((deadline == nullptr or (*deadline > steady_clock::now())) and improved) {
         improved = lin_kernighan_main_loop(tour, tour_edges, city_to_tour_idx, distances, knn, deadline);
     }
