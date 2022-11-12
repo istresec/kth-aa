@@ -1,6 +1,6 @@
 # Travelling Salesperson 2D
 
-Frano Rajič*, Ivan Stresec*
+Ivan Stresec*, Frano Rajič*
 
 
 [`Project report`](https://github.com/m43/kth-aa/blob/main/report.pdf) | [`Problem definition`](https://kth.kattis.com/problems/tsp)
