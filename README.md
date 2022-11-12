@@ -3,7 +3,7 @@
 Ivan Stresec*, Frano Rajič*
 
 
-[`Project report`](https://github.com/m43/kth-aa/blob/main/report.pdf) | [`Problem definition`](https://kth.kattis.com/problems/tsp)
+[`Project report`](https://github.com/istresec/kth-aa/blob/main/report.pdf) | [`Problem definition`](https://kth.kattis.com/problems/tsp)
 
 Codebase contains a competitive C++ solution with 6 algorithms implemented: greedy, Clarke-Wright, Christofides, 2-opt, 3-opt, and Lin-Kernighan (k-opt). Solved as part of the project assignment in the *DD22440 Advanced Algorithms* course at KTH, by Prof. Danupon Nanongkai.
 
