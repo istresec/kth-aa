@@ -16,6 +16,7 @@ void findEulerianCircuit(unsigned int n, const vector<tuple<T, T, U>> &selectedE
 #include <vector>
 #include <tuple>
 #include <stack>
+#include <unordered_map>
 #include "utility.h"
 #include "blossom5_all_in_one_file.h"
 
